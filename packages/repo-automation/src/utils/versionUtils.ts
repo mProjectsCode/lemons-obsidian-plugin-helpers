@@ -2,7 +2,7 @@ import type { Parser } from '@lemons_dev/parsinom/lib/Parser';
 import { P_UTILS } from '@lemons_dev/parsinom/lib/ParserUtils';
 import { P } from '@lemons_dev/parsinom/lib/ParsiNOM';
 import Moment from 'moment';
-import { UserError } from 'packages/repo-automation/src/utils/utils';
+import { UserError } from './utils';
 
 export class Version {
 	major: number;

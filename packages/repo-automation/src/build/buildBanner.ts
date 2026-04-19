@@ -1,5 +1,5 @@
-import type {FileSystem} from 'packages/repo-automation/src/utils/fileSystem';
-import { defaultFileSystem  } from 'packages/repo-automation/src/utils/fileSystem';
+import type { FileSystem } from '../utils/fileSystem';
+import { defaultFileSystem } from '../utils/fileSystem';
 
 export interface BuildBannerManifest {
 	name: string;

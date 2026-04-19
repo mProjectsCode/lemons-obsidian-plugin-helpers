@@ -3,7 +3,6 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import onlyWarn from 'eslint-plugin-only-warn';
-import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths';
 import * as pluginImport from 'eslint-plugin-import';
 
 export default tseslint.config(
@@ -26,7 +25,6 @@ export default tseslint.config(
 		},
 		plugins: {
 			'only-warn': onlyWarn,
-			'no-relative-import-paths': noRelativeImportPaths,
 			import: pluginImport,
 		},
 		rules: {

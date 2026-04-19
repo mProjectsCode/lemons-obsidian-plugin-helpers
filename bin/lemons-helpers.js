@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { runRelease } from '../dist/release.js';
+import { runRelease } from '../dist/packages/repo-automation/src/release.js';
 
 function printUsage() {
 	console.log('lemons-helpers <command>');

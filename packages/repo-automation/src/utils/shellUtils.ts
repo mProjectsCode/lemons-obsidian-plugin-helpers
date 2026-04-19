@@ -11,11 +11,7 @@ function exec(c: string, cwd?: string): Subprocess<'ignore', 'pipe', 'inherit'> 
 	return Bun.spawn(stringArgv(c), { cwd: cwd });
 }
 
-export async function $(
-	cmd: string,
-	cwd?: string  ,
-	verboseness: Verboseness = Verboseness.NORMAL,
-): Promise<{ stdout: string; stderr: string; exit: number }> {
+export async function $(cmd: string, cwd?: string, verboseness: Verboseness = Verboseness.NORMAL): Promise<{ stdout: string; stderr: string; exit: number }> {
 	if (verboseness === Verboseness.NORMAL || verboseness === Verboseness.VERBOSE) {
 		if (cwd !== undefined) {
 			console.log(`\n${CMD_FMT.Bright}running${CMD_FMT.Reset} in ${cwd} - ${cmd}\n`);
@@ -69,7 +65,7 @@ export async function $seq(
 	cmds: string[],
 	onError: (cmd: string, index: number) => void,
 	onSuccess: () => void,
-	cwd?: string  ,
+	cwd?: string,
 	verboseness: Verboseness = Verboseness.NORMAL,
 ): Promise<void> {
 	const results = [];

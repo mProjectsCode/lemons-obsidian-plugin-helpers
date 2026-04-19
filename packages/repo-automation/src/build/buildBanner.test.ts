@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import type {BuildBannerManifest} from 'packages/repo-automation/src/build/buildBanner';
-import { getBuildBanner, loadManifestForBanner  } from 'packages/repo-automation/src/build/buildBanner';
+import type { BuildBannerManifest } from 'packages/repo-automation/src/build/buildBanner';
+import { getBuildBanner, loadManifestForBanner } from 'packages/repo-automation/src/build/buildBanner';
 import { MemoryFileSystem } from 'packages/repo-automation/src/utils/fileSystem';
 
 describe('buildBanner', () => {

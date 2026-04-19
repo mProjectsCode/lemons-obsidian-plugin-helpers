@@ -1,10 +1,10 @@
 import path from 'node:path';
-import type { FileSystem } from 'packages/repo-automation/src/utils/fileSystem';
-import { defaultFileSystem } from 'packages/repo-automation/src/utils/fileSystem';
-import { $choice, $confirm, $seq, CMD_FMT, Verboseness } from 'packages/repo-automation/src/utils/shellUtils';
-import { UserError } from 'packages/repo-automation/src/utils/utils';
-import type { Version } from 'packages/repo-automation/src/utils/versionUtils';
-import { CanaryVersion, getIncrementOptions, parseVersion, stringifyVersion } from 'packages/repo-automation/src/utils/versionUtils';
+import type { FileSystem } from './utils/fileSystem';
+import { defaultFileSystem } from './utils/fileSystem';
+import { $choice, $confirm, $seq, CMD_FMT, Verboseness } from './utils/shellUtils';
+import { UserError } from './utils/utils';
+import type { Version } from './utils/versionUtils';
+import { CanaryVersion, getIncrementOptions, parseVersion, stringifyVersion } from './utils/versionUtils';
 
 export interface RepoAutomationConfig {
 	devBranch: string;

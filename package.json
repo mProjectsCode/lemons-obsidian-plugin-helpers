@@ -8,19 +8,26 @@
 		"dist"
 	],
 	"exports": {
-		".": "./dist/helpers.js",
-		"./repo-automation": "./dist/repo-automation.js"
+		".": {
+			"types": "./dist/packages/helpers/src/index.d.ts",
+			"import": "./dist/packages/helpers/src/index.js"
+		},
+		"./repo-automation": {
+			"types": "./dist/packages/repo-automation/src/index.d.ts",
+			"import": "./dist/packages/repo-automation/src/index.js"
+		},
+		"./release": {
+			"types": "./dist/packages/repo-automation/src/release.d.ts",
+			"import": "./dist/packages/repo-automation/src/release.js"
+		}
 	},
+	"types": "./dist/packages/helpers/src/index.d.ts",
 	"bin": {
 		"lemons-helpers": "./bin/lemons-helpers.js"
 	},
 	"scripts": {
-		"dev": "vite",
 		"clean": "rm -rf dist",
-		"build:helpers": "bun build packages/helpers/src/index.ts --outfile dist/helpers.js --target=node --format esm",
-		"build:repo-automation": "bun build packages/repo-automation/src/index.ts --outfile dist/repo-automation.js --target=node --format esm",
-		"build:release": "bun build packages/repo-automation/src/release.ts --outfile dist/release.js --target=bun --format esm",
-		"build": "bun run clean && bun run build:helpers && bun run build:repo-automation && bun run build:release",
+		"build": "bun run clean && tsc -p tsconfig.build.json",
 		"prepack": "bun run build",
 		"typecheck": "tsc --noEmit",
 		"test": "bun test",

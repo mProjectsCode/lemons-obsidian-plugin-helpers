@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"paths": {
-			"packages/*": ["./packages/*"],
+			"packages/*": ["./packages/*"]
 		},
 		"module": "ESNext",
 		"target": "ESNext",
@@ -18,5 +18,5 @@
 		"allowSyntheticDefaultImports": true,
 		"resolveJsonModule": true
 	},
-	"include": ["packages/**/*.ts", "vite.config.ts"]
+	"include": ["packages/**/*.ts"]
 }

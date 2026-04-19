@@ -4,7 +4,7 @@ Shared library for my Obsidian plugins. Not intended for anyone else to use, but
 
 ## Parts
 
-- `packages/repo-automation`: shared repo automation scripts 
+- `packages/repo-automation`: shared repo automation scripts
 - `packages/helpers`: placeholder for future helper utilities
 
 ## Use In A Plugin Repo
