@@ -9,25 +9,25 @@
 	],
 	"exports": {
 		".": {
-			"types": "./dist/packages/helpers/src/index.d.ts",
-			"import": "./dist/packages/helpers/src/index.js"
+			"types": "./dist/packages/helpers/src/index.d.mts",
+			"import": "./dist/packages/helpers/src/index.mjs"
 		},
 		"./repo-automation": {
-			"types": "./dist/packages/repo-automation/src/index.d.ts",
-			"import": "./dist/packages/repo-automation/src/index.js"
+			"types": "./dist/packages/repo-automation/src/index.d.mts",
+			"import": "./dist/packages/repo-automation/src/index.mjs"
 		},
 		"./release": {
-			"types": "./dist/packages/repo-automation/src/release.d.ts",
-			"import": "./dist/packages/repo-automation/src/release.js"
+			"types": "./dist/packages/repo-automation/src/release.d.mts",
+			"import": "./dist/packages/repo-automation/src/release.mjs"
 		}
 	},
-	"types": "./dist/packages/helpers/src/index.d.ts",
+	"types": "./dist/packages/helpers/src/index.d.mts",
 	"bin": {
 		"lemons-helpers": "./bin/lemons-helpers.js"
 	},
 	"scripts": {
 		"clean": "rm -rf dist",
-		"build": "bun run clean && tsc -p tsconfig.build.json",
+		"build": "bun run clean && tsdown --config tsdown.config.ts",
 		"prepack": "bun run build",
 		"typecheck": "tsc --noEmit",
 		"test": "bun test",
@@ -51,6 +51,7 @@
 		"eslint-plugin-no-relative-import-paths": "^1.6.1",
 		"eslint-plugin-only-warn": "^1.2.1",
 		"prettier": "^3.8.3",
+		"tsdown": "^0.21.9",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.58.2",
 		"vite": "^8.0.8"
