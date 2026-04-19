@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"paths": {
+			"packages/*": ["./packages/*"],
+		},
+		"module": "ESNext",
+		"target": "ESNext",
+		"allowJs": true,
+		"noImplicitAny": true,
+		"strict": true,
+		"strictNullChecks": true,
+		"noImplicitReturns": true,
+		"moduleResolution": "bundler",
+		"importHelpers": true,
+		"isolatedModules": true,
+		"lib": ["DOM", "ES2022"],
+		"types": ["bun-types"],
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true
+	},
+	"include": ["packages/**/*.ts", "vite.config.ts"]
+}
