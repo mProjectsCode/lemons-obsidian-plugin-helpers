@@ -33,3 +33,13 @@ For repo-specific branch and GitHub values, add `repo-automation.config.json` at
 ```
 
 `preconditions` controls which checks are executed before the release flow continues.
+
+## DTS Bundle Plugin Import
+
+Instead of importing from an internal source path, use the package export subpath:
+
+```ts
+import { dtsBundlePlugin } from 'lemons-obsidian-plugin-helpers/repo-automation';
+```
+
+Direct internal imports like `lemons-obsidian-plugin-helpers/packages/repo-automation/src/build/dtsBundlePlugin` should be avoided.

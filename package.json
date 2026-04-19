@@ -8,6 +8,9 @@
 		"packages/repo-automation",
 		"packages/helpers"
 	],
+	"exports": {
+		"./repo-automation": "./packages/repo-automation/src/index.ts"
+	},
 	"bin": {
 		"lemons-helpers": "./bin/lemons-helpers.js"
 	},
