@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 
-import { runRelease } from '../packages/repo-automation/src/release.ts';
-import { UserError } from '../packages/repo-automation/src/utils/utils.ts';
+import { runRelease } from '../dist/release.js';
 
 function printUsage() {
 	console.log('lemons-helpers <command>');
@@ -21,7 +20,7 @@ if (command === 'release') {
 	try {
 		await runRelease();
 	} catch (error) {
-		if (error instanceof UserError) {
+		if (error instanceof Error) {
 			console.error(error.message);
 			process.exit(1);
 		}
