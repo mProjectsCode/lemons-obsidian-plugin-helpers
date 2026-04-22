@@ -6,7 +6,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers.git",
+		"url": "git+https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers.git",
 		"directory": "packages/repo-automation"
 	},
 	"files": [
@@ -25,7 +25,7 @@
 	},
 	"types": "./dist/src/index.d.mts",
 	"bin": {
-		"lemons-automation": "./bin/lemons-automation.js"
+		"lemons-automation": "bin/lemons-automation.js"
 	},
 	"scripts": {
 		"clean": "rm -rf dist",
