@@ -90,7 +90,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Publish helpers package
-        run: npm publish -w @lemons_dev/lemons-obsidian-plugin-helpers --provenance
+        run: npm publish -w @lemons_dev/lemons-obsidian-plugin-helpers
 
   publish-automation:
     if: startsWith(github.ref_name, 'automation-v')
@@ -115,4 +115,4 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Publish automation package
-        run: npm publish -w @lemons_dev/lemons-obsidian-plugin-automation --provenance
+        run: npm publish -w @lemons_dev/lemons-obsidian-plugin-automation
