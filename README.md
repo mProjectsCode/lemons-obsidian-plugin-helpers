@@ -19,8 +19,6 @@ Install this package, then call the shared release script from your plugin `pack
 }
 ```
 
-`lemons-helpers` is exposed through the package `bin` field, so package managers place it in `node_modules/.bin` and script runners can invoke it directly.
-
 For repo-specific branch and GitHub values, add `repo-automation.config.json` at the plugin repo root:
 
 ```json
@@ -33,13 +31,3 @@ For repo-specific branch and GitHub values, add `repo-automation.config.json` at
 ```
 
 `preconditions` controls which checks are executed before the release flow continues.
-
-## DTS Bundle Plugin Import
-
-Instead of importing from an internal source path, use the package export subpath:
-
-```ts
-import { dtsBundlePlugin } from 'lemons-obsidian-plugin-helpers/repo-automation';
-```
-
-Direct internal imports like `lemons-obsidian-plugin-helpers/packages/repo-automation/src/build/dtsBundlePlugin` should be avoided.

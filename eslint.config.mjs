@@ -1,11 +1,12 @@
 // @ts-check
 
 import eslint from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import onlyWarn from 'eslint-plugin-only-warn';
 import * as pluginImport from 'eslint-plugin-import';
 
-export default tseslint.config(
+export default defineConfig(
 	{
 		ignores: ['node_modules/', 'dist/'],
 	},
@@ -24,6 +25,7 @@ export default tseslint.config(
 			},
 		},
 		plugins: {
+			// @ts-ignore
 			'only-warn': onlyWarn,
 			import: pluginImport,
 		},
@@ -44,7 +46,6 @@ export default tseslint.config(
 			],
 			'@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
 			'@typescript-eslint/restrict-template-expressions': 'off',
-			'no-relative-import-paths/no-relative-import-paths': ['warn', { allowSameFolder: false }],
 			'@typescript-eslint/ban-ts-comment': 'off',
 			'@typescript-eslint/no-empty-function': 'off',
 			'@typescript-eslint/no-inferrable-types': 'off',

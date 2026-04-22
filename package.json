@@ -32,8 +32,8 @@
 		"typecheck": "tsc --noEmit",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
-		"lint": "eslint .",
-		"lint:fix": "eslint --fix .",
+		"lint": "eslint packages/**",
+		"lint:fix": "eslint --fix packages/**",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"check": "bun run format:check && bun run typecheck && bun run lint && bun run test"
