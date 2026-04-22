@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { Parser } from '@lemons_dev/parsinom/lib/Parser';
-import { P } from '@lemons_dev/parsinom/lib/ParsiNOM';
+import type { Parser } from '@lemons_dev/parsinom';
+import { P } from '@lemons_dev/parsinom';
 import type { Plugin } from 'vite';
 
 interface DtsBundlePluginResolvedOptions {
