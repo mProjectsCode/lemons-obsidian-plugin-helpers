@@ -136,18 +136,7 @@ export async function runMonorepoRelease(): Promise<void> {
 		Verboseness.NORMAL,
 	);
 
-	let runPublish = true;
-	await $confirm(`Run publish command for ${target.name} now?`, () => {
-		runPublish = false;
-	});
-
-	if (runPublish) {
-		await $(`npm publish -w ${target.name} --access public`);
-
-		console.log(`${CMD_FMT.FgGreen}package ${target.name} published successfully${CMD_FMT.Reset}`);
-	} else {
-		console.log(`${CMD_FMT.FgYellow}skipped publishing package ${target.name}. remember to run npm publish -w ${target.name} --access public${CMD_FMT.Reset}`);
-	}
+	console.log(`${CMD_FMT.FgGreen}prepared release for ${target.name}. remember to run \n> npm publish -w ${target.name} --access public${CMD_FMT.Reset}`);
 }
 
 if (import.meta.main) {
