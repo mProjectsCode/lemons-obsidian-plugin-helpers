@@ -18,13 +18,13 @@ interface PackageJsonVersionOnly {
 const PACKAGE_TARGETS: readonly PackageTarget[] = [
 	{
 		id: 'helpers',
-		name: 'lemons-obsidian-plugin-helpers',
+		name: '@lemons_dev/lemons-obsidian-plugin-helpers',
 		packageJsonPath: 'packages/helpers/package.json',
 		tagPrefix: 'helpers-v',
 	},
 	{
 		id: 'automation',
-		name: 'lemons-obsidian-plugin-automation',
+		name: '@lemons_dev/lemons-obsidian-plugin-automation',
 		packageJsonPath: 'packages/repo-automation/package.json',
 		tagPrefix: 'automation-v',
 	},
@@ -130,7 +130,8 @@ export async function runMonorepoRelease(): Promise<void> {
 		[
 			`git add ${target.packageJsonPath}`,
 			`git commit -m "[release] ${target.name} ${nextVersion}"`,
-			`git tag -a ${tag} -m "release ${target.name} ${nextVersion}"`,
+			`git push`
+
 		],
 		() => {
 			throw new UserError('failed to create release commit/tag');
@@ -140,11 +141,18 @@ export async function runMonorepoRelease(): Promise<void> {
 		Verboseness.NORMAL,
 	);
 
-	console.log(`${CMD_FMT.BgGreen}release prepared${CMD_FMT.Reset}`);
-	console.log(`commit and tag created locally for ${target.name}`);
-	console.log(`to publish, run:`);
-	console.log(`  git push origin HEAD`);
-	console.log(`  git push origin ${tag}`);
+	let runPublish = true;
+	await $confirm(`Run publish command for ${target.name} now?`, () => {
+		runPublish = false;
+	});
+
+	if (runPublish) {
+		await $(`npm publish -w ${target.name} --access public`);
+
+		console.log(`${CMD_FMT.FgGreen}package ${target.name} published successfully${CMD_FMT.Reset}`);
+	} else {
+		console.log(`${CMD_FMT.FgYellow}skipped publishing package ${target.name}. remember to run npm publish -w ${target.name} --access public${CMD_FMT.Reset}`);
+	}
 }
 
 if (import.meta.main) {
