@@ -16,7 +16,6 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"lib": ["ES2022"],
-		"types": ["bun-types"],
 		"skipLibCheck": true,
 		"allowSyntheticDefaultImports": true,
 		"resolveJsonModule": true
