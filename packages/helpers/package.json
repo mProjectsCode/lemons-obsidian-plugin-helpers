@@ -1,36 +1,36 @@
 {
-    "name": "@lemons_dev/lemons-obsidian-plugin-helpers",
-    "version": "0.1.7",
-    "description": "Shared helper utilities for Lemons Obsidian plugins",
-    "type": "module",
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers.git",
-        "directory": "packages/helpers"
-    },
-    "files": [
-        "dist"
-    ],
-    "exports": {
-        ".": {
-            "types": "./dist/src/index.d.mts",
-            "import": "./dist/src/index.mjs"
-        }
-    },
-    "types": "./dist/src/index.d.mts",
-    "scripts": {
-        "clean": "rm -rf dist",
-        "build": "bun run clean && tsdown --config tsdown.config.ts",
-        "prepack": "bun run build",
-        "typecheck": "tsc --noEmit -p tsconfig.json",
-        "test": "echo \"No tests in helpers package yet\"",
-        "lint": "eslint src/**/*.ts",
-        "lint:fix": "eslint --fix src/**/*.ts"
-    },
-    "publishConfig": {
-        "access": "public",
-        "provenance": true,
-        "directory": "packages/helpers"
-    }
+	"name": "@lemons_dev/lemons-obsidian-plugin-helpers",
+	"version": "0.1.8",
+	"description": "Shared helper utilities for Lemons Obsidian plugins",
+	"type": "module",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers.git",
+		"directory": "packages/helpers"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.mts",
+			"import": "./dist/src/index.mjs"
+		}
+	},
+	"types": "./dist/src/index.d.mts",
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "bun run clean && tsdown --config tsdown.config.ts",
+		"prepack": "bun run build",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test": "echo \"No tests in helpers package yet\"",
+		"lint": "eslint src/**/*.ts",
+		"lint:fix": "eslint --fix src/**/*.ts"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true,
+		"directory": "packages/helpers"
+	}
 }
