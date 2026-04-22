@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { getRepoPath, loadConfig, readJsonFile, writeJsonFile } from 'packages/repo-automation/src/release';
-import { MemoryFileSystem } from 'packages/repo-automation/src/utils/fileSystem';
-import { UserError } from 'packages/repo-automation/src/utils/utils';
+import { getRepoPath, loadConfig, readJsonFile, writeJsonFile } from './release';
+import { MemoryFileSystem } from './utils/fileSystem';
+import { UserError } from './utils/utils';
 
 describe('release helpers', () => {
 	it('builds repository paths', () => {

@@ -1,47 +1,36 @@
 {
-	"name": "lemons-obsidian-plugin-helpers",
+	"name": "lemons-obsidian-plugin-monorepo",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"files": [
-		"bin",
-		"dist"
+	"workspaces": [
+		"packages/helpers",
+		"packages/repo-automation"
 	],
-	"exports": {
-		".": {
-			"types": "./dist/packages/helpers/src/index.d.mts",
-			"import": "./dist/packages/helpers/src/index.mjs"
-		},
-		"./repo-automation": {
-			"types": "./dist/packages/repo-automation/src/index.d.mts",
-			"import": "./dist/packages/repo-automation/src/index.mjs"
-		},
-		"./release": {
-			"types": "./dist/packages/repo-automation/src/release.d.mts",
-			"import": "./dist/packages/repo-automation/src/release.mjs"
-		}
-	},
-	"types": "./dist/packages/helpers/src/index.d.mts",
-	"bin": {
-		"lemons-helpers": "./bin/lemons-helpers.js"
-	},
 	"scripts": {
-		"clean": "rm -rf dist",
-		"build": "bun run clean && tsdown --config tsdown.config.ts",
-		"prepack": "bun run build",
-		"typecheck": "tsc --noEmit",
-		"test": "bun test",
+		"clean": "bun run clean:helpers && bun run clean:repo-automation",
+		"clean:helpers": "cd packages/helpers && bun run clean",
+		"clean:repo-automation": "cd packages/repo-automation && bun run clean",
+		"build": "bun run build:helpers && bun run build:repo-automation",
+		"build:helpers": "cd packages/helpers && bun run build",
+		"build:repo-automation": "cd packages/repo-automation && bun run build",
+		"release:package": "bun run monorepoRelease.ts",
+		"typecheck": "bun run typecheck:helpers && bun run typecheck:repo-automation",
+		"typecheck:helpers": "cd packages/helpers && bun run typecheck",
+		"typecheck:repo-automation": "cd packages/repo-automation && bun run typecheck",
+		"test": "bun run test:helpers && bun run test:repo-automation",
+		"test:helpers": "cd packages/helpers && bun run test",
+		"test:repo-automation": "cd packages/repo-automation && bun run test",
 		"test:watch": "bun test --watch",
-		"lint": "eslint packages/**",
-		"lint:fix": "eslint --fix packages/**",
+		"lint": "bun run lint:helpers && bun run lint:repo-automation",
+		"lint:helpers": "cd packages/helpers && bun run lint",
+		"lint:repo-automation": "cd packages/repo-automation && bun run lint",
+		"lint:fix": "bun run lint:fix:helpers && bun run lint:fix:repo-automation",
+		"lint:fix:helpers": "cd packages/helpers && bun run lint:fix",
+		"lint:fix:repo-automation": "cd packages/repo-automation && bun run lint:fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"check": "bun run format:check && bun run typecheck && bun run lint && bun run test"
-	},
-	"dependencies": {
-		"@lemons_dev/parsinom": "^0.1.0",
-		"moment": "^2.30.1",
-		"string-argv": "^0.3.2"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.1",

@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 
-import { runRelease } from '../dist/packages/repo-automation/src/release.mjs';
+import { runRelease } from '../dist/src/release.mjs';
 
 function printUsage() {
-	console.log('lemons-helpers <command>');
+	console.log('lemons-automation <command>');
 	console.log('');
 	console.log('Commands:');
 	console.log('  release    Run the interactive release workflow');
@@ -28,6 +28,7 @@ if (command === 'release') {
 		console.error(error);
 		process.exit(1);
 	}
+	process.exit(0);
 } else {
 	console.error(`Unknown command "${command}"`);
 	printUsage();

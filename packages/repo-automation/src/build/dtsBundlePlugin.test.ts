@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { _dtsBundlePluginInternals } from 'packages/repo-automation/src/build/dtsBundlePlugin';
-import { MemoryFileSystem } from 'packages/repo-automation/src/utils/fileSystem';
+import { MemoryFileSystem } from '../utils/fileSystem';
+import { _dtsBundlePluginInternals } from './dtsBundlePlugin';
 
 describe('dtsBundlePlugin internals', () => {
 	it('renders bundle modules with rewritten specifiers and stripped ambient noise', () => {

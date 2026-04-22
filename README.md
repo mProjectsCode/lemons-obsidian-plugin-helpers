@@ -1,25 +1,41 @@
-# lemons-obsidian-plugin-helpers
+# Lemons Obsidian Plugin Monorepo
 
-Shared library for my Obsidian plugins. Not intended for anyone else to use, but open source for transparency reasons.
+This repository contains two separate npm packages.
 
-## Parts
+## Packages
 
-- `packages/repo-automation`: shared repo automation scripts
-- `packages/helpers`: placeholder for future helper utilities
+- `lemons-obsidian-plugin-helpers` in `packages/helpers`
+- `lemons-obsidian-plugin-automation` in `packages/repo-automation`
 
-## Use In A Plugin Repo
+Both packages are licensed under MIT.
 
-Install this package, then call the shared release script from your plugin `package.json`:
+## Install
+
+Helpers package:
+
+```bash
+npm install lemons-obsidian-plugin-helpers
+```
+
+Automation package:
+
+```bash
+npm install --save-dev lemons-obsidian-plugin-automation
+```
+
+## Use The Automation CLI
+
+Add this script in your plugin repository:
 
 ```json
 {
 	"scripts": {
-		"release": "lemons-helpers release"
+		"release": "lemons-automation release"
 	}
 }
 ```
 
-For repo-specific branch and GitHub values, add `repo-automation.config.json` at the plugin repo root:
+Then add `repo-automation.config.json` at your plugin repository root:
 
 ```json
 {
@@ -30,4 +46,32 @@ For repo-specific branch and GitHub values, add `repo-automation.config.json` at
 }
 ```
 
-`preconditions` controls which checks are executed before the release flow continues.
+`preconditions` controls which checks run before the release flow continues.
+
+## Release Monorepo Packages
+
+Use the independent release CLI from the monorepo root:
+
+```bash
+bun run release:package
+```
+
+The CLI will:
+
+- let you choose `lemons-obsidian-plugin-helpers` or `lemons-obsidian-plugin-automation`
+- let you choose the next version (major/minor/patch/custom)
+- create a release commit and package-specific tag locally
+
+Tag format used for independent publishing:
+
+- helpers package: `helpers-v<version>`
+- automation package: `automation-v<version>`
+
+After the script finishes, push the commit and tag:
+
+```bash
+git push origin HEAD
+git push origin <tag>
+```
+
+The GitHub workflow then publishes only the package matching the tag.

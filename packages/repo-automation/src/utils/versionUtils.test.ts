@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { CanaryVersion, Version, getIncrementOptions, parseVersion, stringifyVersion } from 'packages/repo-automation/src/utils/versionUtils';
+import { CanaryVersion, Version, getIncrementOptions, parseVersion, stringifyVersion } from './versionUtils';
 
 describe('versionUtils', () => {
 	it('parses and stringifies stable versions', () => {

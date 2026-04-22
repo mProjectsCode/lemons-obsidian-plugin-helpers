@@ -1,2 +1,0 @@
-import { a as getRepoRoot, c as runPreconditions, i as getRepoPath, l as runRelease, n as PluginPackageJson, o as loadConfig, r as RepoAutomationConfig, s as readJsonFile, t as PluginManifest, u as writeJsonFile } from "../../../release-DrUYdBXo.mjs";
-export { PluginManifest, PluginPackageJson, RepoAutomationConfig, getRepoPath, getRepoRoot, loadConfig, readJsonFile, runPreconditions, runRelease, writeJsonFile };

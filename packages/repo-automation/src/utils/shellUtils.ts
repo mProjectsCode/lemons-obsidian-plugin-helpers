@@ -8,7 +8,7 @@ export enum Verboseness {
 }
 
 function exec(c: string, cwd?: string): Subprocess<'ignore', 'pipe', 'inherit'> {
-	return Bun.spawn(stringArgv(c), { cwd: cwd });
+	return Bun.spawn(stringArgv(c), { cwd: cwd }) as Subprocess<'ignore', 'pipe', 'inherit'>;
 }
 
 export async function $(cmd: string, cwd?: string, verboseness: Verboseness = Verboseness.NORMAL): Promise<{ stdout: string; stderr: string; exit: number }> {
@@ -21,8 +21,10 @@ export async function $(cmd: string, cwd?: string, verboseness: Verboseness = Ve
 	}
 
 	const proc = exec(cmd, cwd);
-	const stdout = await new Response(proc.stdout).text();
-	const stderr = await new Response(proc.stderr).text();
+	const stdoutStream = proc.stdout as ReadableStream<Uint8Array>;
+	const stderrStream = proc.stderr as ReadableStream<Uint8Array>;
+	const stdout = await Bun.readableStreamToText(stdoutStream);
+	const stderr = await Bun.readableStreamToText(stderrStream);
 
 	if (verboseness === Verboseness.VERBOSE) {
 		if (stdout !== '') {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import type { BuildBannerManifest } from 'packages/repo-automation/src/build/buildBanner';
-import { getBuildBanner, loadManifestForBanner } from 'packages/repo-automation/src/build/buildBanner';
-import { MemoryFileSystem } from 'packages/repo-automation/src/utils/fileSystem';
+import { MemoryFileSystem } from '../utils/fileSystem';
+import type { BuildBannerManifest } from './buildBanner';
+import { getBuildBanner, loadManifestForBanner } from './buildBanner';
 
 describe('buildBanner', () => {
 	it('loads manifest from explicit path', () => {
