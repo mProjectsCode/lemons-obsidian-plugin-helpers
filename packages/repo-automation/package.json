@@ -1,6 +1,6 @@
 {
 	"name": "@lemons_dev/lemons-obsidian-plugin-automation",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Shared repository automation scripts for Lemons Obsidian plugins",
 	"type": "module",
 	"license": "MIT",
