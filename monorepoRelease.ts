@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { $choice, $confirm, $input, $seq, CMD_FMT, Verboseness } from './packages/repo-automation/src/utils/shellUtils';
+import { $, $choice, $confirm, $input, $seq, CMD_FMT, Verboseness } from './packages/repo-automation/src/utils/shellUtils';
 import { UserError } from './packages/repo-automation/src/utils/utils';
 import type { Version } from './packages/repo-automation/src/utils/versionUtils';
 import { getIncrementOptions, parseVersion, stringifyVersion } from './packages/repo-automation/src/utils/versionUtils';
@@ -30,18 +30,14 @@ const PACKAGE_TARGETS: readonly PackageTarget[] = [
 	},
 ];
 
-function getRepoRoot(): string {
-	const result = Bun.spawnSync(['git', 'rev-parse', '--show-toplevel'], {
-		cwd: process.cwd(),
-		stdout: 'pipe',
-		stderr: 'pipe',
-	});
+async function getRepoRoot(): Promise<string> {
+	const result = await $('git rev-parse --show-toplevel', undefined, Verboseness.QUITET);
 
-	if (result.exitCode !== 0) {
+	if (result.exit !== 0) {
 		throw new UserError('failed to determine git repository root');
 	}
 
-	const root = Buffer.from(result.stdout).toString().trim();
+	const root = result.stdout.trim();
 	if (root.length === 0) {
 		throw new UserError('git repository root is empty');
 	}
@@ -108,7 +104,7 @@ async function askForVersion(currentVersionString: string): Promise<string> {
 }
 
 export async function runMonorepoRelease(): Promise<void> {
-	const repoRoot = getRepoRoot();
+	const repoRoot = await getRepoRoot();
 	await ensureCleanWorkingTree(repoRoot);
 
 	const packageLabels: string[] = [];

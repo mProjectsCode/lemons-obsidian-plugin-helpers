@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { FileSystem } from './utils/fileSystem';
 import { defaultFileSystem } from './utils/fileSystem';
-import { $choice, $confirm, $seq, CMD_FMT, Verboseness } from './utils/shellUtils';
+import { $, $choice, $confirm, $seq, CMD_FMT, Verboseness } from './utils/shellUtils';
 import { UserError } from './utils/utils';
 import type { Version } from './utils/versionUtils';
 import { CanaryVersion, getIncrementOptions, parseVersion, stringifyVersion } from './utils/versionUtils';
@@ -24,18 +24,14 @@ export interface PluginPackageJson {
 
 type VersionsJson = Record<string, string>;
 
-export function getRepoRoot(): string {
-	const result = Bun.spawnSync(['git', 'rev-parse', '--show-toplevel'], {
-		cwd: process.cwd(),
-		stdout: 'pipe',
-		stderr: 'pipe',
-	});
+export async function getRepoRoot(): Promise<string> {
+	const result = await $('git rev-parse --show-toplevel', undefined, Verboseness.QUITET);
 
-	if (result.exitCode !== 0) {
+	if (result.exit !== 0) {
 		throw new UserError('failed to determine git repository root');
 	}
 
-	const root = Buffer.from(result.stdout).toString().trim();
+	const root = result.stdout.trim();
 	if (root.length === 0) {
 		throw new UserError('git repository root is empty');
 	}
@@ -138,7 +134,7 @@ export async function runPreconditions(preconditions: string[] | undefined): Pro
 }
 
 export async function runRelease(): Promise<void> {
-	const repoRoot = getRepoRoot();
+	const repoRoot = await getRepoRoot();
 	const config = await loadConfig(repoRoot, defaultFileSystem);
 
 	const manifestPath = defaultFileSystem.join(repoRoot, 'manifest.json');
