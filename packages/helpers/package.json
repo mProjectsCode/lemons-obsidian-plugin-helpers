@@ -1,6 +1,6 @@
 {
 	"name": "@lemons_dev/lemons-obsidian-plugin-helpers",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Shared helper utilities for Lemons Obsidian plugins",
 	"type": "module",
 	"license": "MIT",
