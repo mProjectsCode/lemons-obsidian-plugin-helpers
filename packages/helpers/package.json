@@ -27,10 +27,5 @@
 		"test": "echo \"No tests in helpers package yet\"",
 		"lint": "eslint src/**/*.ts",
 		"lint:fix": "eslint --fix src/**/*.ts"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true,
-		"directory": "packages/helpers"
 	}
 }
