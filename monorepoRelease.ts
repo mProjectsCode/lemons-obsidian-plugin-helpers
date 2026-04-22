@@ -127,12 +127,7 @@ export async function runMonorepoRelease(): Promise<void> {
 	await writePackageVersion(packageJsonPath, nextVersion);
 
 	await $seq(
-		[
-			`git add ${target.packageJsonPath}`,
-			`git commit -m "[release] ${target.name} ${nextVersion}"`,
-			`git push`
-
-		],
+		[`git add ${target.packageJsonPath}`, `git commit -m "[release] ${target.name} ${nextVersion}"`, `git push`],
 		() => {
 			throw new UserError('failed to create release commit/tag');
 		},
