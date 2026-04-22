@@ -7,8 +7,8 @@ export enum Verboseness {
 	VERBOSE,
 }
 
-function exec(c: string, cwd?: string): Subprocess<'ignore', 'pipe', 'inherit'> {
-	return Bun.spawn(stringArgv(c), { cwd: cwd }) as Subprocess<'ignore', 'pipe', 'inherit'>;
+function exec(c: string, cwd?: string): Subprocess<'ignore', 'pipe', 'pipe'> {
+	return Bun.spawn(stringArgv(c), { cwd: cwd, stderr: 'pipe', stdout: 'pipe' }) as Subprocess<'ignore', 'pipe', 'pipe'>;
 }
 
 export async function $(cmd: string, cwd?: string, verboseness: Verboseness = Verboseness.NORMAL): Promise<{ stdout: string; stderr: string; exit: number }> {
