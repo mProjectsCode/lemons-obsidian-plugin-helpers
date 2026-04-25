@@ -110,4 +110,16 @@ describe('dtsBundlePlugin internals', () => {
 			),
 		).toThrow('No declaration files were generated for bundling.');
 	});
+
+	it('generates explicit source include globs for temporary tsconfig', () => {
+		expect(_dtsBundlePluginInternals.getSourceIncludeGlobs('packages/jsEngine/src')).toEqual([
+			'packages/jsEngine/src/**/*.ts',
+			'packages/jsEngine/src/**/*.tsx',
+			'packages/jsEngine/src/**/*.mts',
+			'packages/jsEngine/src/**/*.cts',
+			'packages/jsEngine/src/**/*.d.ts',
+			'packages/jsEngine/src/**/*.d.mts',
+			'packages/jsEngine/src/**/*.d.cts',
+		]);
+	});
 });

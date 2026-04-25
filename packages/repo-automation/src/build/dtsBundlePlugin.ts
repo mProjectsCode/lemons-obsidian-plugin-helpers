@@ -46,6 +46,20 @@ function normalizePathLike(value: string): string {
 	return value.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
 }
 
+function getSourceIncludeGlobs(sourceDir: string): string[] {
+	const normalizedSourceDir = sourceDir.replace(/\\/g, '/').replace(/\/+$/, '');
+
+	return [
+		`${normalizedSourceDir}/**/*.ts`,
+		`${normalizedSourceDir}/**/*.tsx`,
+		`${normalizedSourceDir}/**/*.mts`,
+		`${normalizedSourceDir}/**/*.cts`,
+		`${normalizedSourceDir}/**/*.d.ts`,
+		`${normalizedSourceDir}/**/*.d.mts`,
+		`${normalizedSourceDir}/**/*.d.cts`,
+	];
+}
+
 function isAbsolutePathLike(value: string): boolean {
 	return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value);
 }
@@ -490,8 +504,7 @@ function renderDeclarationBundle(declarations: DeclarationModule[], options: Pic
 
 async function bundleTypes(options: DtsBundlePluginResolvedOptions): Promise<void> {
 	const tempTsConfigPath = path.join(options.rootDir, `.tsconfig.types.generated.${process.pid}.json`);
-	const sourceTsGlob = `${options.sourceDir.replace(/\\/g, '/')}/**/*.{ts,tsx,mts,cts}`;
-	const sourceDtsGlob = `${options.sourceDir.replace(/\\/g, '/')}/**/*.{d.ts,d.mts,d.cts}`;
+	const sourceIncludeGlobs = getSourceIncludeGlobs(options.sourceDir);
 	const tempOutDir = path.join(options.rootDir, options.tempDir);
 	const outputFilePath = path.join(options.rootDir, options.outputFile);
 	const sourceDirPath = path.join(options.rootDir, options.sourceDir);
@@ -508,7 +521,7 @@ async function bundleTypes(options: DtsBundlePluginResolvedOptions): Promise<voi
 			rootDir: options.sourceDir,
 			outDir: options.tempDir,
 		},
-		include: [sourceTsGlob, sourceDtsGlob],
+		include: sourceIncludeGlobs,
 		exclude: ['**/*.test.ts', '**/*.spec.ts'],
 	};
 
@@ -560,6 +573,7 @@ export function dtsBundlePlugin(options: DtsBundlePluginOptions): Plugin {
 }
 
 export const _dtsBundlePluginInternals = {
+	getSourceIncludeGlobs,
 	resolveOptions,
 	resolveModuleSpecifier,
 	runModuleContentPipeline,
