@@ -11,6 +11,8 @@ interface DtsBundlePluginResolvedOptions {
 	tempDir: string;
 	outputFile: string;
 	modulePrefix: string;
+	externalPackageAllowList?: string[];
+	disallowedExternalImportType: 'unknown' | 'any';
 }
 
 export interface DtsBundlePluginOptions {
@@ -18,11 +20,15 @@ export interface DtsBundlePluginOptions {
 	tempDir: string;
 	outputFile: string;
 	modulePrefix: string;
+	externalPackageAllowList?: string[];
+	disallowedExternalImportType?: 'unknown' | 'any';
 }
 
 interface RewriteContext {
 	modulePrefix: string;
 	sourceDirPrefix: string;
+	externalPackageAllowList?: readonly string[];
+	disallowedExternalImportType?: 'unknown' | 'any';
 }
 
 interface ProcessingContext {
@@ -86,6 +92,22 @@ function assertNonEmptyOption(name: keyof DtsBundlePluginOptions, value: string)
 	}
 }
 
+function assertExternalPackageAllowList(value: readonly string[] | undefined): void {
+	if (value === undefined) {
+		return;
+	}
+
+	for (const packageName of value) {
+		if (packageName.trim().length === 0) {
+			throw new Error('[dts-bundle-plugin] Invalid option "externalPackageAllowList": package names cannot be empty.');
+		}
+
+		if (packageName.startsWith('.') || packageName.startsWith('/')) {
+			throw new Error('[dts-bundle-plugin] Invalid option "externalPackageAllowList": package names must be bare package specifiers.');
+		}
+	}
+}
+
 function resolveOptions(rootDir: string, options: DtsBundlePluginOptions): DtsBundlePluginResolvedOptions {
 	assertNonEmptyOption('sourceDir', options.sourceDir);
 	assertNonEmptyOption('tempDir', options.tempDir);
@@ -94,11 +116,14 @@ function resolveOptions(rootDir: string, options: DtsBundlePluginOptions): DtsBu
 	assertRelativePathOption('sourceDir', options.sourceDir);
 	assertRelativePathOption('tempDir', options.tempDir);
 	assertRelativePathOption('outputFile', options.outputFile);
+	assertExternalPackageAllowList(options.externalPackageAllowList);
 
 	const sourceDir = normalizePathLike(options.sourceDir);
 	const tempDir = normalizePathLike(options.tempDir);
 	const outputFile = normalizePathLike(options.outputFile);
 	const modulePrefix = normalizePathLike(options.modulePrefix);
+	const externalPackageAllowList = options.externalPackageAllowList?.map(packageName => packageName.trim());
+	const disallowedExternalImportType = options.disallowedExternalImportType ?? 'unknown';
 
 	if (outputFile.endsWith('/')) {
 		throw new Error('[dts-bundle-plugin] Invalid option "outputFile": expected a file path, got a directory.');
@@ -118,6 +143,8 @@ function resolveOptions(rootDir: string, options: DtsBundlePluginOptions): DtsBu
 		tempDir,
 		outputFile,
 		modulePrefix,
+		externalPackageAllowList,
+		disallowedExternalImportType,
 	};
 }
 
@@ -337,6 +364,215 @@ function removeEmptyExportStatements(content: string): string {
 		.join('\n');
 }
 
+function getBarePackageName(specifier: string, context: RewriteContext): string | undefined {
+	if (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith(`${context.modulePrefix}/`) || specifier === context.modulePrefix) {
+		return undefined;
+	}
+
+	if (specifier.startsWith(`${context.sourceDirPrefix}/`) || specifier === context.sourceDirPrefix || specifier.startsWith('src/')) {
+		return undefined;
+	}
+
+	const segments = specifier.split('/');
+	if (specifier.startsWith('@')) {
+		if (segments.length < 2 || segments[1] === '') {
+			return specifier;
+		}
+
+		return `${segments[0]}/${segments[1]}`;
+	}
+
+	return segments[0] || undefined;
+}
+
+function isExternalPackageAllowed(specifier: string, context: RewriteContext): boolean {
+	if (context.externalPackageAllowList === undefined) {
+		return true;
+	}
+
+	const packageName = getBarePackageName(specifier, context);
+	return packageName === undefined || context.externalPackageAllowList.includes(packageName);
+}
+
+function parseSpecifierAfterFrom(line: string): { specifier: string } | undefined {
+	const fromIndex = line.lastIndexOf('from');
+	if (fromIndex === -1 || !hasWordAt(line, fromIndex, 'from')) {
+		return undefined;
+	}
+
+	const quoteStart = skipInlineWhitespace(line, fromIndex + 'from'.length);
+	if (quoteStart >= line.length || (line[quoteStart] !== '"' && line[quoteStart] !== "'")) {
+		return undefined;
+	}
+
+	const parsed = parseQuotedSpecifier(line, quoteStart);
+	if (parsed === undefined) {
+		return undefined;
+	}
+
+	return { specifier: parsed.specifier };
+}
+
+function splitCommaSeparatedImportNames(value: string): string[] {
+	return value
+		.split(',')
+		.map(part => part.trim())
+		.filter(Boolean);
+}
+
+function getImportedBindingNames(importClause: string): { typeAliases: string[]; namespaceAliases: string[] } {
+	const typeAliases: string[] = [];
+	const namespaceAliases: string[] = [];
+	const clause = importClause
+		.trim()
+		.replace(/^type\s+/, '')
+		.trim();
+	const namespaceMatch = /^\*\s+as\s+([A-Za-z_$][\w$]*)$/.exec(clause);
+	if (namespaceMatch !== null) {
+		namespaceAliases.push(namespaceMatch[1]);
+		return { typeAliases, namespaceAliases };
+	}
+
+	const namedStart = clause.indexOf('{');
+	const namedEnd = clause.lastIndexOf('}');
+	const defaultPart = namedStart === -1 ? clause : clause.slice(0, namedStart).replace(/,$/, '').trim();
+	const defaultMatch = /^([A-Za-z_$][\w$]*)/.exec(defaultPart);
+	if (defaultMatch !== null) {
+		typeAliases.push(defaultMatch[1]);
+	}
+
+	if (namedStart !== -1 && namedEnd > namedStart) {
+		const namedPart = clause.slice(namedStart + 1, namedEnd);
+		for (const binding of splitCommaSeparatedImportNames(namedPart)) {
+			const normalizedBinding = binding.replace(/^type\s+/, '').trim();
+			const aliasMatch = /^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/.exec(normalizedBinding);
+			if (aliasMatch !== null) {
+				typeAliases.push(aliasMatch[2] ?? aliasMatch[1]);
+			}
+		}
+	}
+
+	return { typeAliases, namespaceAliases };
+}
+
+function getExportedBindingNames(exportClause: string): string[] {
+	const namedStart = exportClause.indexOf('{');
+	const namedEnd = exportClause.lastIndexOf('}');
+	if (namedStart === -1 || namedEnd <= namedStart) {
+		return [];
+	}
+
+	return splitCommaSeparatedImportNames(exportClause.slice(namedStart + 1, namedEnd))
+		.map(binding => {
+			const normalizedBinding = binding.replace(/^type\s+/, '').trim();
+			const aliasMatch = /^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/.exec(normalizedBinding);
+			return aliasMatch?.[2] ?? aliasMatch?.[1] ?? '';
+		})
+		.filter(Boolean);
+}
+
+function makeTypeAliasLine(name: string, fallbackType: 'unknown' | 'any', exported: boolean): string {
+	return `${exported ? 'export ' : ''}type ${name} = ${fallbackType};`;
+}
+
+function replaceDisallowedDynamicImportTypes(line: string, context: RewriteContext): string {
+	let next = line;
+	const importTypePattern = /\btypeof\s+import\(\s*(["'])([^"']+)\1\s*\)(?:\.[A-Za-z_$][\w$]*)*|\bimport\(\s*(["'])([^"']+)\3\s*\)(?:\.[A-Za-z_$][\w$]*)*/g;
+	next = next.replace(
+		importTypePattern,
+		(match: string, _quoteA: string | undefined, specifierA: string | undefined, _quoteB: string | undefined, specifierB: string | undefined) => {
+			const specifier = specifierA ?? specifierB ?? '';
+			return isExternalPackageAllowed(specifier, context) ? match : (context.disallowedExternalImportType ?? 'unknown');
+		},
+	);
+
+	return next;
+}
+
+function replaceDisallowedNamespaceReferences(line: string, namespaceAliases: readonly string[], fallbackType: 'unknown' | 'any'): string {
+	let next = line;
+	for (const namespaceAlias of namespaceAliases) {
+		next = next.replace(new RegExp(`\\b${namespaceAlias}(?:\\.[A-Za-z_$][\\w$]*)+`, 'g'), fallbackType);
+	}
+
+	return next;
+}
+
+function replaceDisallowedExternalImports(content: string, _moduleId: string, context: ProcessingContext): string {
+	if (context.rewriteContext.externalPackageAllowList === undefined) {
+		return content;
+	}
+
+	const emittedAliases = new Set<string>();
+	const namespaceAliases = new Set<string>();
+	const lines = content.split('\n');
+	const transformedLines: string[] = [];
+
+	for (const line of lines) {
+		const trimmed = line.trimStart();
+		const leadingWhitespace = line.slice(0, line.length - trimmed.length);
+		const fromSpecifier = parseSpecifierAfterFrom(line);
+
+		if (fromSpecifier !== undefined && !isExternalPackageAllowed(fromSpecifier.specifier, context.rewriteContext)) {
+			if (trimmed.startsWith('import ')) {
+				const importIndex = line.indexOf('import');
+				const importClause = line.slice(importIndex + 'import'.length, line.lastIndexOf('from')).trim();
+				const bindings = getImportedBindingNames(importClause);
+				for (const namespaceAlias of bindings.namespaceAliases) {
+					namespaceAliases.add(namespaceAlias);
+				}
+
+				for (const typeAlias of bindings.typeAliases) {
+					if (!emittedAliases.has(typeAlias)) {
+						transformedLines.push(
+							`${leadingWhitespace}${makeTypeAliasLine(typeAlias, context.rewriteContext.disallowedExternalImportType ?? 'unknown', false)}`,
+						);
+						emittedAliases.add(typeAlias);
+					}
+				}
+
+				continue;
+			}
+
+			if (trimmed.startsWith('export ')) {
+				for (const exportedName of getExportedBindingNames(line.slice(0, line.lastIndexOf('from')))) {
+					if (!emittedAliases.has(`export:${exportedName}`)) {
+						transformedLines.push(
+							`${leadingWhitespace}${makeTypeAliasLine(exportedName, context.rewriteContext.disallowedExternalImportType ?? 'unknown', true)}`,
+						);
+						emittedAliases.add(`export:${exportedName}`);
+					}
+				}
+
+				continue;
+			}
+		}
+
+		if (trimmed.startsWith('import ') && fromSpecifier === undefined) {
+			const importIndex = line.indexOf('import');
+			const quoteStart = skipInlineWhitespace(line, importIndex + 'import'.length);
+			if (quoteStart < line.length && (line[quoteStart] === '"' || line[quoteStart] === "'")) {
+				const parsed = parseQuotedSpecifier(line, quoteStart);
+				if (parsed !== undefined && !isExternalPackageAllowed(parsed.specifier, context.rewriteContext)) {
+					continue;
+				}
+			}
+		}
+
+		transformedLines.push(line);
+	}
+
+	return transformedLines
+		.map(line =>
+			replaceDisallowedNamespaceReferences(
+				replaceDisallowedDynamicImportTypes(line, context.rewriteContext),
+				[...namespaceAliases],
+				context.rewriteContext.disallowedExternalImportType ?? 'unknown',
+			),
+		)
+		.join('\n');
+}
+
 function startsWithDeclarableKeyword(segment: string): boolean {
 	const trimmed = segment.trimStart();
 	if (trimmed.startsWith('abstract ')) {
@@ -394,6 +630,7 @@ function normalizeSourcePrefixInBundle(content: string, context: ProcessingConte
 function runModuleContentPipeline(content: string, moduleId: string, context: ProcessingContext): string {
 	const pipeline: ModuleContentTransform[] = [
 		rewriteModuleSpecifiers,
+		replaceDisallowedExternalImports,
 		(current, _moduleId, _context): string => removeCssSideEffectImports(current),
 		(current, _moduleId, _context): string => removeEmptyExportStatements(current),
 		(current, _moduleId, _context): string => stripNestedDeclareModifiers(current),
@@ -460,10 +697,16 @@ async function runTsc(projectPath: string, cwd: string): Promise<void> {
 	});
 }
 
-function renderDeclarationBundle(declarations: DeclarationModule[], options: Pick<DtsBundlePluginResolvedOptions, 'modulePrefix' | 'sourceDir'>): string {
+function renderDeclarationBundle(
+	declarations: DeclarationModule[],
+	options: Pick<DtsBundlePluginResolvedOptions, 'modulePrefix' | 'sourceDir'> &
+		Partial<Pick<DtsBundlePluginResolvedOptions, 'externalPackageAllowList' | 'disallowedExternalImportType'>>,
+): string {
 	const rewriteContext: RewriteContext = {
 		modulePrefix: options.modulePrefix,
 		sourceDirPrefix: options.sourceDir,
+		externalPackageAllowList: options.externalPackageAllowList,
+		disallowedExternalImportType: options.disallowedExternalImportType ?? 'unknown',
 	};
 
 	const orderedDeclarations = [...declarations].sort((a, b) => a.moduleId.localeCompare(b.moduleId));

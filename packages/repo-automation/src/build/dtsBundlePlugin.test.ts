@@ -77,6 +77,65 @@ describe('dtsBundlePlugin internals', () => {
 		expect(transformed).toContain('from "plugin/helpers/components/panel"');
 	});
 
+	it('replaces imports from packages outside the allow list with unknown aliases', () => {
+		const transformed = _dtsBundlePluginInternals.runModuleContentPipeline(
+			[
+				'import type DefaultThing, { AllowedThing } from "allowed-package";',
+				'import type DisallowedDefault, { DisallowedThing, type OriginalName as LocalName } from "disallowed-package/subpath";',
+				'import type * as DisallowedNamespace from "@scope/disallowed";',
+				'import "disallowed-package/register";',
+				'export { ExportedThing as PublicExportedThing } from "another-disallowed-package";',
+				'export type AllowedLazy = import("allowed-package").AllowedLazy;',
+				'export type DisallowedLazy = import("disallowed-package").DisallowedLazy;',
+				'export type DisallowedNamespaceValue = DisallowedNamespace.Value;',
+				'export interface UsesImports {',
+				'  allowed: AllowedThing;',
+				'  defaultValue: DisallowedDefault;',
+				'  namedValue: DisallowedThing;',
+				'  localValue: LocalName;',
+				'}',
+			].join('\n'),
+			'plugin/helpers/index',
+			{
+				rewriteContext: {
+					modulePrefix: 'plugin/helpers',
+					sourceDirPrefix: 'src',
+					externalPackageAllowList: ['allowed-package'],
+				},
+			},
+		);
+
+		expect(transformed).toContain('import type DefaultThing, { AllowedThing } from "allowed-package";');
+		expect(transformed).toContain('type DisallowedDefault = unknown;');
+		expect(transformed).toContain('type DisallowedThing = unknown;');
+		expect(transformed).toContain('type LocalName = unknown;');
+		expect(transformed).toContain('export type PublicExportedThing = unknown;');
+		expect(transformed).toContain('export type AllowedLazy = import("allowed-package").AllowedLazy;');
+		expect(transformed).toContain('export type DisallowedLazy = unknown;');
+		expect(transformed).toContain('export type DisallowedNamespaceValue = unknown;');
+		expect(transformed).not.toContain('from "disallowed-package');
+		expect(transformed).not.toContain('import "disallowed-package/register";');
+		expect(transformed).not.toContain('DisallowedNamespace.Value');
+	});
+
+	it('uses any for disallowed package imports when configured', () => {
+		const transformed = _dtsBundlePluginInternals.runModuleContentPipeline(
+			'import type { ExternalThing } from "external-package";\nexport type Lazy = import("external-package").Lazy;',
+			'plugin/helpers/index',
+			{
+				rewriteContext: {
+					modulePrefix: 'plugin/helpers',
+					sourceDirPrefix: 'src',
+					externalPackageAllowList: [],
+					disallowedExternalImportType: 'any',
+				},
+			},
+		);
+
+		expect(transformed).toContain('type ExternalThing = any;');
+		expect(transformed).toContain('export type Lazy = any;');
+	});
+
 	it('rejects absolute and traversing option paths', () => {
 		expect(() =>
 			_dtsBundlePluginInternals.resolveOptions('/repo', {
