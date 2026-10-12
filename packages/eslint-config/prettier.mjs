@@ -1,0 +1,1 @@
+export default { printWidth: 160, useTabs: true, tabWidth: 4, semi: true, singleQuote: true, arrowParens: 'avoid' };

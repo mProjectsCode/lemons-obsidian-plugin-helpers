@@ -5,7 +5,8 @@
 	"type": "module",
 	"workspaces": [
 		"packages/helpers",
-		"packages/repo-automation"
+		"packages/repo-automation",
+		"packages/eslint-config"
 	],
 	"scripts": {
 		"clean": "bun run clean:helpers && bun run clean:repo-automation",
@@ -15,14 +16,14 @@
 		"build:helpers": "cd packages/helpers && bun run build",
 		"build:repo-automation": "cd packages/repo-automation && bun run build",
 		"release:package": "bun run monorepoRelease.ts",
-		"typecheck": "bun run typecheck:helpers && bun run typecheck:repo-automation",
+		"typecheck": "bun run typecheck:helpers && bun run typecheck:repo-automation && bun run typecheck:tools",
 		"typecheck:helpers": "cd packages/helpers && bun run typecheck",
 		"typecheck:repo-automation": "cd packages/repo-automation && bun run typecheck",
-		"test": "bun run test:helpers && bun run test:repo-automation",
+		"test": "bun run test:helpers && bun run test:repo-automation && bun run test:eslint-config",
 		"test:helpers": "cd packages/helpers && bun run test",
 		"test:repo-automation": "cd packages/repo-automation && bun run test",
 		"test:watch": "bun test --watch",
-		"lint": "bun run lint:helpers && bun run lint:repo-automation",
+		"lint": "bun run lint:helpers && bun run lint:repo-automation && bun run lint:eslint-config && bun run lint:tools",
 		"lint:helpers": "cd packages/helpers && bun run lint",
 		"lint:repo-automation": "cd packages/repo-automation && bun run lint",
 		"lint:fix": "bun run lint:fix:helpers && bun run lint:fix:repo-automation",
@@ -30,19 +31,31 @@
 		"lint:fix:repo-automation": "cd packages/repo-automation && bun run lint:fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"check": "bun run format:check && bun run typecheck && bun run lint && bun run test"
+		"check": "bun run format:check && bun run typecheck && bun run lint && bun run test",
+		"test:eslint-config": "bun --cwd packages/eslint-config test",
+		"verify": "bun run check && bun run build",
+		"lint:eslint-config": "cd packages/eslint-config && bun run lint",
+		"typecheck:tools": "tsc --noEmit -p tsconfig.tools.json",
+		"lint:tools": "eslint monorepoRelease.ts scripts/**/*.ts --max-warnings=0"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.39.4",
-		"@types/bun": "^1.3.13",
-		"eslint": "^9.39.4",
+		"@eslint/js": "9.39.4",
+		"@types/bun": "1.3.14",
+		"@types/node": "25.5.0",
+		"eslint": "9.39.4",
 		"eslint-plugin-import": "^2.32.0",
 		"eslint-plugin-no-relative-import-paths": "^1.6.1",
-		"eslint-plugin-only-warn": "^1.2.1",
-		"prettier": "^3.8.3",
-		"tsdown": "^0.21.10",
-		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.59.0",
-		"vite": "^8.0.9"
-	}
+		"eslint-plugin-obsidianmd": "0.4.2",
+		"prettier": "3.9.4",
+		"svelte": "5.56.3",
+		"tsdown": "0.21.10",
+		"typescript": "6.0.3",
+		"typescript-eslint": "8.61.1",
+		"vite": "8.1.3"
+	},
+	"overrides": {
+		"typescript": "6.0.3",
+		"typescript-eslint": "8.61.1"
+	},
+	"packageManager": "bun@1.4.0"
 }

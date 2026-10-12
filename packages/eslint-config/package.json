@@ -1,0 +1,51 @@
+{
+	"name": "@lemons_dev/eslint-config-obsidian",
+	"version": "0.1.4",
+	"description": "Shared development and community review ESLint profiles for Obsidian plugins",
+	"type": "module",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers.git",
+		"directory": "packages/eslint-config"
+	},
+	"files": [
+		"index.mjs",
+		"index.d.ts",
+		"prettier.mjs",
+		"README.md"
+	],
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.mjs"
+		},
+		"./prettier": "./prettier.mjs"
+	},
+	"scripts": {
+		"test": "bun test",
+		"lint": "eslint . --max-warnings=0"
+	},
+	"dependencies": {
+		"eslint-plugin-obsidianmd": "0.4.2",
+		"typescript-eslint": "8.61.1",
+		"eslint-plugin-svelte": "3.19.0",
+		"globals": "14.0.0",
+		"prettier-plugin-svelte": "4.1.1",
+		"@eslint/js": "9.39.4"
+	},
+	"peerDependencies": {
+		"eslint": "^9.39.4",
+		"typescript": ">=5.9.3 <6.1.0",
+		"svelte": "^5.0.0",
+		"prettier": "^3.8.4"
+	},
+	"peerDependenciesMeta": {
+		"svelte": {
+			"optional": true
+		},
+		"prettier": {
+			"optional": true
+		}
+	}
+}

@@ -61,7 +61,7 @@ export async function readJsonFile<T>(filePath: string, description: string, fil
 }
 
 export async function writeJsonFile(filePath: string, value: unknown, fileSystem: FileSystem = defaultFileSystem): Promise<void> {
-	await fileSystem.writeText(filePath, JSON.stringify(value, null, '\t'));
+	await fileSystem.writeText(filePath, JSON.stringify(value, null, '\t') + '\n');
 }
 
 export async function loadConfig(repoRoot: string, fileSystem: FileSystem = defaultFileSystem): Promise<RepoAutomationConfig> {
@@ -96,41 +96,47 @@ export async function runPreconditions(preconditions: string[] | undefined): Pro
 		Verboseness.VERBOSE,
 	);
 
-	// add changed files
-	await $seq(
-		[`git add .`],
-		() => {
-			throw new UserError('failed to add preconditions changes to git');
-		},
-		() => {},
-		undefined,
-		Verboseness.NORMAL,
-	);
-
-	// check if there were any changes
-	let changesToCommit = false;
-	await $seq(
-		[`git diff --quiet`, `git diff --cached --quiet`],
-		() => {
-			changesToCommit = true;
-		},
-		() => {},
-		undefined,
-		Verboseness.QUITET,
-	);
-
-	// if there were any changes, commit them
-	if (changesToCommit) {
-		await $seq(
-			[`git commit -m "[auto] run release preconditions"`],
-			() => {
-				throw new UserError('failed to add preconditions changes to git');
-			},
-			() => {},
-			undefined,
-			Verboseness.NORMAL,
-		);
+	const status = await $('git status --porcelain', undefined, Verboseness.QUITET);
+	if (status.exit !== 0 || status.stdout.trim()) {
+		throw new UserError('Release preconditions changed the working tree; inspect changes before continuing');
 	}
+}
+
+/** Select the manifest shipped by a tagged release in its disposable build checkout. */
+export async function prepareReleaseManifest(repoRoot: string, tag: string, fileSystem: FileSystem = defaultFileSystem): Promise<void> {
+	const version = parseVersion(tag);
+	const manifestPath = fileSystem.join(repoRoot, 'manifest.json');
+	const manifest = await readJsonFile<PluginManifest>(manifestPath, 'plugin manifest', fileSystem);
+	if (version instanceof CanaryVersion) {
+		const base = `${version.major}.${version.minor}.${version.patch}`;
+		if (base !== manifest.version) {
+			throw new UserError(`Canary base ${base} does not match stable manifest version ${manifest.version}`);
+		}
+		manifest.version = tag;
+		await writeJsonFile(manifestPath, manifest, fileSystem);
+	} else if (manifest.version !== tag) {
+		throw new UserError(`Stable tag ${tag} does not match manifest version ${manifest.version}`);
+	}
+}
+
+export async function prepareVersionMetadata(repoRoot: string, version: Version, fileSystem: FileSystem = defaultFileSystem): Promise<void> {
+	// Canary versions live in tags and release assets; stable metadata stays byte-for-byte unchanged.
+	if (version instanceof CanaryVersion) {
+		return;
+	}
+	const manifestPath = fileSystem.join(repoRoot, 'manifest.json');
+	const versionsPath = fileSystem.join(repoRoot, 'versions.json');
+	const packagePath = fileSystem.join(repoRoot, 'package.json');
+	const manifest = await readJsonFile<PluginManifest>(manifestPath, 'plugin manifest', fileSystem);
+	const versions = await readJsonFile<VersionsJson>(versionsPath, 'plugin versions map', fileSystem);
+	const metadata = await readJsonFile<PluginPackageJson>(packagePath, 'plugin package.json', fileSystem);
+	const versionString = stringifyVersion(version);
+	manifest.version = versionString;
+	versions[versionString] = manifest.minAppVersion;
+	metadata.version = versionString;
+	await writeJsonFile(manifestPath, manifest, fileSystem);
+	await writeJsonFile(versionsPath, versions, fileSystem);
+	await writeJsonFile(packagePath, metadata, fileSystem);
 }
 
 export async function runRelease(): Promise<void> {
@@ -138,22 +144,17 @@ export async function runRelease(): Promise<void> {
 	const config = await loadConfig(repoRoot, defaultFileSystem);
 
 	const manifestPath = defaultFileSystem.join(repoRoot, 'manifest.json');
-	const betaManifestPath = defaultFileSystem.join(repoRoot, 'manifest-beta.json');
-	const versionsPath = defaultFileSystem.join(repoRoot, 'versions.json');
-	const packagePath = defaultFileSystem.join(repoRoot, 'package.json');
 
 	console.log('looking for untracked changes ...');
 
-	// check for any uncommited files and exit if there are any
-	await $seq(
-		[`git add .`, `git diff --quiet`, `git diff --cached --quiet`, `git checkout ${config.devBranch}`],
-		() => {
-			throw new UserError('there are still untracked changes');
-		},
-		() => {},
-		undefined,
-		Verboseness.QUITET,
-	);
+	const status = await $('git status --porcelain', undefined, Verboseness.QUITET);
+	if (status.exit !== 0 || status.stdout.trim()) {
+		throw new UserError('Working tree must be clean before release preparation');
+	}
+	const branch = await $('git branch --show-current', undefined, Verboseness.QUITET);
+	if (branch.exit !== 0 || branch.stdout.trim() !== config.devBranch) {
+		throw new UserError(`Switch to ${config.devBranch} before release preparation`);
+	}
 
 	console.log('\nrunning preconditions ...\n');
 
@@ -182,67 +183,15 @@ export async function runRelease(): Promise<void> {
 		throw new UserError('user canceled script');
 	});
 
-	if (!(newVersion instanceof CanaryVersion)) {
-		manifest.version = newVersionString;
-	}
+	await prepareVersionMetadata(repoRoot, newVersion);
 
-	await writeJsonFile(manifestPath, manifest, defaultFileSystem);
-
-	const betaManifest = structuredClone(manifest);
-	betaManifest.version = newVersionString;
-
-	await writeJsonFile(betaManifestPath, betaManifest, defaultFileSystem);
-
-	if (!(newVersion instanceof CanaryVersion)) {
-		const versionsJson = await readJsonFile<VersionsJson>(versionsPath, 'plugin versions map', defaultFileSystem);
-
-		versionsJson[newVersionString] = manifest.minAppVersion;
-
-		await writeJsonFile(versionsPath, versionsJson, defaultFileSystem);
-
-		const packageJson = await readJsonFile<PluginPackageJson>(packagePath, 'plugin package.json', defaultFileSystem);
-
-		packageJson.version = newVersionString;
-
-		await writeJsonFile(packagePath, packageJson, defaultFileSystem);
-	}
-
-	await $seq(
-		[`bun run format`, `git add .`, `git commit -m "[auto] bump version to \`${newVersionString}\`"`],
-		() => {
-			throw new UserError('failed to add preconditions changes to git');
-		},
-		() => {},
-		undefined,
-		Verboseness.NORMAL,
+	console.log(`${CMD_FMT.BgGreen}Prepared ${newVersionString}${CMD_FMT.Reset}`);
+	console.log(
+		newVersion instanceof CanaryVersion
+			? 'Stable metadata is unchanged. Tag this commit with the prepared canary version explicitly.'
+			: 'Review the manifest/package/version changes, then commit and publish explicitly.',
 	);
-
-	console.log('\ncreating release tag ...\n');
-
-	await $seq(
-		[
-			`git checkout ${config.releaseBranch}`,
-			`git merge ${config.devBranch} --commit -m "[auto] merge \`${newVersionString}\` release commit"`,
-			`git push origin ${config.releaseBranch}`,
-			`git tag -a ${newVersionString} -m "release version ${newVersionString}"`,
-			`git push origin ${newVersionString}`,
-			`git checkout ${config.devBranch}`,
-			`git merge ${config.releaseBranch}`,
-			`git push origin ${config.devBranch}`,
-		],
-		() => {
-			throw new UserError('failed to merge or create tag');
-		},
-		() => {},
-		undefined,
-		Verboseness.NORMAL,
-	);
-
-	console.log('');
-
-	console.log(`${CMD_FMT.BgGreen}done${CMD_FMT.Reset}`);
-	console.log(`${config.github}`);
-	console.log(`${config.github}/releases/tag/${newVersionString}`);
+	console.log(config.github);
 }
 
 if (import.meta.main) {

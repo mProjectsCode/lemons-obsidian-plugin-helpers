@@ -1,11 +1,11 @@
 import path from 'node:path';
-import { $, $choice, $confirm, $input, $seq, CMD_FMT, Verboseness } from './packages/repo-automation/src/utils/shellUtils';
+import { $, $choice, $confirm, $input, CMD_FMT, Verboseness } from './packages/repo-automation/src/utils/shellUtils';
 import { UserError } from './packages/repo-automation/src/utils/utils';
 import type { Version } from './packages/repo-automation/src/utils/versionUtils';
 import { getIncrementOptions, parseVersion, stringifyVersion } from './packages/repo-automation/src/utils/versionUtils';
 
 interface PackageTarget {
-	id: 'helpers' | 'automation';
+	id: 'helpers' | 'automation' | 'eslint-config';
 	name: string;
 	packageJsonPath: string;
 	tagPrefix: string;
@@ -16,6 +16,7 @@ interface PackageJsonVersionOnly {
 }
 
 const PACKAGE_TARGETS: readonly PackageTarget[] = [
+	{ id: 'eslint-config', name: '@lemons_dev/eslint-config-obsidian', packageJsonPath: 'packages/eslint-config/package.json', tagPrefix: 'eslint-config-v' },
 	{
 		id: 'helpers',
 		name: '@lemons_dev/lemons-obsidian-plugin-helpers',
@@ -71,15 +72,10 @@ function pickStableIncrementOptions(currentVersion: Version): [Version, Version,
 }
 
 async function ensureCleanWorkingTree(repoRoot: string): Promise<void> {
-	await $seq(
-		['git diff --quiet', 'git diff --cached --quiet'],
-		() => {
-			throw new UserError('working tree is dirty. commit or stash changes before releasing');
-		},
-		() => {},
-		repoRoot,
-		Verboseness.QUITET,
-	);
+	const result = await $('git status --porcelain', repoRoot, Verboseness.QUITET);
+	if (result.exit !== 0 || result.stdout.trim()) {
+		throw new UserError('Working tree must be clean before package release preparation');
+	}
 }
 
 async function askForVersion(currentVersionString: string): Promise<string> {
@@ -126,17 +122,7 @@ export async function runMonorepoRelease(): Promise<void> {
 
 	await writePackageVersion(packageJsonPath, nextVersion);
 
-	await $seq(
-		[`git add ${target.packageJsonPath}`, `git commit -m "[release] ${target.name} ${nextVersion}"`, `git push`],
-		() => {
-			throw new UserError('failed to create release commit/tag');
-		},
-		() => {},
-		repoRoot,
-		Verboseness.NORMAL,
-	);
-
-	console.log(`${CMD_FMT.FgGreen}prepared release for ${target.name}. remember to run \n> npm publish -w ${target.name} --access public${CMD_FMT.Reset}`);
+	console.log(`Prepared ${target.name} ${nextVersion}. Review the version change, verify, then commit and tag ${tag} explicitly.`);
 }
 
 if (import.meta.main) {

@@ -25,7 +25,7 @@
 		"prepack": "bun run build",
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"test": "echo \"No tests in helpers package yet\"",
-		"lint": "eslint src/**/*.ts",
-		"lint:fix": "eslint --fix src/**/*.ts"
+		"lint": "eslint src/**/*.ts --max-warnings=0",
+		"lint:fix": "eslint src/**/*.ts --fix --max-warnings=0"
 	}
 }

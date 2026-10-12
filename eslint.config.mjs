@@ -3,7 +3,6 @@
 import eslint from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
-import onlyWarn from 'eslint-plugin-only-warn';
 import * as pluginImport from 'eslint-plugin-import';
 
 export default defineConfig(
@@ -26,7 +25,6 @@ export default defineConfig(
 		},
 		plugins: {
 			// @ts-ignore
-			'only-warn': onlyWarn,
 			import: pluginImport,
 		},
 		rules: {
@@ -52,5 +50,9 @@ export default defineConfig(
 			'@typescript-eslint/explicit-function-return-type': ['warn'],
 			'@typescript-eslint/require-await': 'off',
 		},
+	},
+	{
+		files: ['monorepoRelease.ts', 'scripts/**/*.ts'],
+		languageOptions: { parserOptions: { project: './tsconfig.tools.json', tsconfigRootDir: process.cwd() } },
 	},
 );
