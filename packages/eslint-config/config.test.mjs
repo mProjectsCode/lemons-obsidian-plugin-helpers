@@ -17,9 +17,26 @@ test('review keeps six security rules at error and makes advisory rules warnings
 	expect(await eslint.isPathIgnored('packages/api/dist/index.js')).toBe(true);
 	expect(await eslint.isPathIgnored('exampleVault/user-script.js')).toBe(true);
 });
-test('CI covers tests and tools without host-only rules', async () => {
+test('CI excludes tests while keeping source and tools covered', async () => {
 	const eslint = linter(createCIConfig({ host: ['src/**'], workers: ['src/worker.ts'] }));
-	expect(await eslint.isPathIgnored('tests/main.test.ts')).toBe(false);
+	for (const file of [
+		'src/main.test.ts',
+		'src/main.tests.ts',
+		'src/main.spec.ts',
+		'src/main.specs.ts',
+		'test/fixtures/api-consumer/index.ts',
+		'packages/core/tests/setup.ts',
+		'packages/core/__tests__/setup.ts',
+		'packages/core/mocks/Plugin.ts',
+		'packages/core/__mocks__/Plugin.ts',
+		'packages/core/testUtils.ts',
+		'packages/core/e2e-tests/setup.ts',
+	]) {
+		expect(await eslint.isPathIgnored(file)).toBe(true);
+	}
+	for (const file of ['src/main.ts', 'src/contest.ts', 'src/testing.ts', 'automation/utils/shellUtils.ts']) {
+		expect(await eslint.isPathIgnored(file)).toBe(false);
+	}
 	const core = await eslint.calculateConfigForFile('packages/core/main.ts');
 	expect(core.rules['obsidianmd/no-nodejs-modules'][0]).toBe(0);
 	expect(core.rules['@typescript-eslint/no-floating-promises'][0]).toBe(2);

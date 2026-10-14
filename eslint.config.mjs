@@ -7,7 +7,21 @@ import * as pluginImport from 'eslint-plugin-import';
 
 export default defineConfig(
 	{
-		ignores: ['node_modules/', 'dist/'],
+		ignores: [
+			'node_modules/',
+			'dist/',
+			'**/*.test.*',
+			'**/*.tests.*',
+			'**/*.spec.*',
+			'**/*.specs.*',
+			'**/test/**',
+			'**/tests/**',
+			'**/__tests__/**',
+			'**/mocks/**',
+			'**/__mocks__/**',
+			'**/testUtils**',
+			'**/e2e-tests/**',
+		],
 	},
 	{
 		files: ['**/*.ts'],

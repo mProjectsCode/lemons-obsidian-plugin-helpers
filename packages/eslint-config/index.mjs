@@ -8,6 +8,19 @@ import { PlainTextParser } from 'eslint-plugin-obsidianmd/dist/lib/plainTextPars
 const code = ['**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'];
 const developmentCode = [...code, '**/*.svelte'];
 const typed = ['**/*.{ts,tsx,mts,cts}'];
+const testIgnores = [
+	'**/*.test.*',
+	'**/*.tests.*',
+	'**/*.spec.*',
+	'**/*.specs.*',
+	'**/test/**',
+	'**/tests/**',
+	'**/__tests__/**',
+	'**/mocks/**',
+	'**/__mocks__/**',
+	'**/testUtils**',
+	'**/e2e-tests/**',
+];
 const generated = [
 	'**/node_modules/**',
 	'**/dist/**',
@@ -116,7 +129,7 @@ export function createReviewConfig({ root = process.cwd(), generated: generatedS
 	]);
 }
 
-/** Development profile: tests/tools are covered; host rules apply only to host source. */
+/** Development profile: source/tools are covered; tests are excluded; host rules apply only to host source. */
 export function createCIConfig({
 	root = process.cwd(),
 	host = ['src/**', 'packages/obsidian/**', 'packages/jsEngine/**'],
@@ -127,7 +140,7 @@ export function createCIConfig({
 	overrides = [],
 } = {}) {
 	const configs = [
-		{ ignores: [...generated, ...ignores] },
+		{ ignores: [...generated, ...testIgnores, ...ignores] },
 		...obsidianmd.configs.recommended,
 		{
 			files: developmentCode,
