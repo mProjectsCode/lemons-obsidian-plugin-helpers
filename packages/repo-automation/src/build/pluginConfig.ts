@@ -58,9 +58,10 @@ export function isHostExternal(id: string, polyfilledBuiltins: string[] = []): b
 export function createObsidianPluginConfig(options: ObsidianPluginConfigOptions): UserConfig {
 	const root = path.resolve(options.root);
 	const manifestPath = path.resolve(root, options.manifest ?? 'manifest.json');
-	const manifestText = readFileSync(manifestPath, 'utf8');
-	const manifest = JSON.parse(manifestText) as ObsidianManifest;
+	let manifestText = readFileSync(manifestPath, 'utf8');
+	let manifest = JSON.parse(manifestText) as ObsidianManifest;
 	validateManifest(manifest);
+	const pluginId = manifest.id;
 	const production = options.mode === 'production';
 	const outDir = production ? path.join(root, 'dist') : path.join(root, options.developmentVault ?? 'exampleVault', '.obsidian', 'plugins', manifest.id);
 	const entry = path.resolve(root, options.entry);
@@ -70,6 +71,17 @@ export function createObsidianPluginConfig(options: ObsidianPluginConfigOptions)
 			...(options.plugins ?? []),
 			{
 				name: 'obsidian-manifest',
+				buildStart(): void {
+					this.addWatchFile(manifestPath);
+					const currentText = readFileSync(manifestPath, 'utf8');
+					const currentManifest = JSON.parse(currentText) as ObsidianManifest;
+					validateManifest(currentManifest);
+					if (currentManifest.id !== pluginId) {
+						throw new Error('Manifest id changed; restart the build to select the new plugin directory');
+					}
+					manifestText = currentText;
+					manifest = currentManifest;
+				},
 				generateBundle(): void {
 					this.emitFile({ type: 'asset', fileName: 'manifest.json', source: manifestText });
 				},
@@ -92,9 +104,10 @@ export function createObsidianPluginConfig(options: ObsidianPluginConfigOptions)
 					entryFileNames: 'main.js',
 					assetFileNames: asset => (asset.names?.some(name => name.endsWith('.css')) ? 'styles.css' : 'assets/[name]-[hash][extname]'),
 					codeSplitting: false,
-					banner: getBuildBanner(production ? 'Release Build' : 'Dev Build', version => version, {
-						manifest: { ...manifest, authorUrl: manifest.authorUrl ?? '' },
-					}),
+					banner: () =>
+						getBuildBanner(production ? 'Release Build' : 'Dev Build', version => version, {
+							manifest: { ...manifest, authorUrl: manifest.authorUrl ?? '' },
+						}),
 				},
 			},
 		},
