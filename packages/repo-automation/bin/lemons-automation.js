@@ -7,6 +7,8 @@ function printUsage() {
 	console.log('lemons-automation <command>');
 	console.log('');
 	console.log('Commands:');
+	console.log('  validate           Validate existing production files in dist');
+	console.log('  package            Archive existing dist files (run bun run package for a fresh build)');
 	console.log('  release:manifest   Select the tagged build manifest using RELEASE_TAG (release checkout only)');
 	console.log('  release:prepare    Prepare version metadata without commits or publication');
 }

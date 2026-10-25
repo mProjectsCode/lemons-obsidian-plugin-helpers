@@ -11,6 +11,25 @@ function exec(c: string, cwd?: string): Subprocess<'ignore', 'pipe', 'pipe'> {
 	return Bun.spawn(stringArgv(c), { cwd: cwd, stderr: 'pipe', stdout: 'pipe' });
 }
 
+async function captureOutput(stream: ReadableStream<Uint8Array>, write?: (text: string) => void): Promise<string> {
+	const reader = stream.getReader();
+	const decoder = new TextDecoder();
+	let output = '';
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+			const text = done ? decoder.decode() : decoder.decode(value, { stream: true });
+			output += text;
+			write?.(text);
+			if (done) {
+				return output;
+			}
+		}
+	} finally {
+		reader.releaseLock();
+	}
+}
+
 export async function $(cmd: string, cwd?: string, verboseness: Verboseness = Verboseness.NORMAL): Promise<{ stdout: string; stderr: string; exit: number }> {
 	if (verboseness === Verboseness.NORMAL || verboseness === Verboseness.VERBOSE) {
 		if (cwd !== undefined) {
@@ -23,30 +42,26 @@ export async function $(cmd: string, cwd?: string, verboseness: Verboseness = Ve
 	const proc = exec(cmd, cwd);
 	const stdoutStream = proc.stdout as ReadableStream<Uint8Array>;
 	const stderrStream = proc.stderr as ReadableStream<Uint8Array>;
-	const stdout = await Bun.readableStreamToText(stdoutStream);
-	const stderr = await Bun.readableStreamToText(stderrStream);
-
-	if (verboseness === Verboseness.VERBOSE) {
-		if (stdout !== '') {
-			console.log(
-				stdout
-					.split('\n')
-					.map(x => `${CMD_FMT.FgGray}>${CMD_FMT.Reset} ${x}\n`)
-					.join(''),
-			);
-		}
-
-		if (stderr !== '') {
-			console.log(
-				stderr
-					.split('\n')
-					.map(x => `${CMD_FMT.FgRed}>${CMD_FMT.Reset} ${x}\n`)
-					.join(''),
-			);
-		}
-	}
-
-	const exit = await proc.exited;
+	const verbose = verboseness === Verboseness.VERBOSE;
+	const [stdout, stderr, exit] = await Promise.all([
+		captureOutput(
+			stdoutStream,
+			verbose
+				? (text): void => {
+						process.stdout.write(text);
+					}
+				: undefined,
+		),
+		captureOutput(
+			stderrStream,
+			verbose
+				? (text): void => {
+						process.stderr.write(text);
+					}
+				: undefined,
+		),
+		proc.exited,
+	]);
 
 	if (verboseness === Verboseness.NORMAL || verboseness === Verboseness.VERBOSE) {
 		if (exit === 0) {

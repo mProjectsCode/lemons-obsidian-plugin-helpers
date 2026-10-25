@@ -221,5 +221,22 @@ export function createCIConfig({
 			rules: { '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', fixStyle: 'separate-type-imports' }] },
 		});
 	}
-	return defineConfig([...configs, ...overrides]);
+	// Keep Obsidian's advisory findings as warnings; enabled development checks block CI.
+	const strictConfigs = configs.map(config => ({
+		...config,
+		...(config.rules
+			? {
+					rules: Object.fromEntries(
+						Object.entries(config.rules).map(([rule, value]) => {
+							const level = Array.isArray(value) ? value[0] : value;
+							if (!rule.startsWith('obsidianmd/') && (level === 'warn' || level === 1)) {
+								return [rule, ['error', ...(Array.isArray(value) ? value.slice(1) : [])]];
+							}
+							return [rule, value];
+						}),
+					),
+				}
+			: {}),
+	}));
+	return defineConfig([...strictConfigs, ...overrides]);
 }

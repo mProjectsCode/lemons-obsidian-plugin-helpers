@@ -96,3 +96,19 @@ test('manifest and license validation are active in CI', async () => {
 	expect(license.fatalErrorCount).toBe(0);
 	expect(license.messages.some(message => message.ruleId === 'obsidianmd/validate-license')).toBe(true);
 });
+
+test('CI promotes development warnings while preserving advisory rules and explicit overrides', async () => {
+	const eslint = linter(createCIConfig({ host: ['src/**'], svelteConfig: {} }));
+	for (const file of ['src/main.ts', 'src/Component.svelte']) {
+		const config = await eslint.calculateConfigForFile(file);
+		expect(config.rules['@typescript-eslint/no-deprecated'][0]).toBe(2);
+		expect(config.rules['@typescript-eslint/no-explicit-any'][0]).toBe(2);
+		expect(config.rules['obsidianmd/ui/sentence-case'][0]).toBe(1);
+		expect(config.rules['no-unsanitized/method'][0]).toBe(2);
+	}
+	const manifest = await eslint.calculateConfigForFile('manifest.json');
+	expect(manifest.rules['obsidianmd/validate-manifest'][0]).toBe(1);
+	const overridden = linter(createCIConfig({ overrides: [{ rules: { '@typescript-eslint/no-deprecated': 'warn' } }] }));
+	const custom = await overridden.calculateConfigForFile('src/main.ts');
+	expect(custom.rules['@typescript-eslint/no-deprecated'][0]).toBe(1);
+});

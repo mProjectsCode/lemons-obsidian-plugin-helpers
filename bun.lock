@@ -22,7 +22,7 @@
     },
     "packages/eslint-config": {
       "name": "@lemons_dev/eslint-config-obsidian",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@eslint/js": "9.39.4",
         "eslint-plugin-obsidianmd": "0.4.2",
@@ -48,7 +48,7 @@
     },
     "packages/repo-automation": {
       "name": "@lemons_dev/lemons-obsidian-plugin-automation",
-      "version": "0.2.2",
+      "version": "0.2.6",
       "bin": {
         "lemons-automation": "bin/lemons-automation.js",
       },

@@ -8,7 +8,7 @@ Three independently versioned packages share this repository:
 | `@lemons_dev/lemons-obsidian-plugin-automation` | `packages/repo-automation` | Plugin builds, artifact validation, packaging and release preparation |
 | `@lemons_dev/eslint-config-obsidian`            | `packages/eslint-config`   | Development/review lint profiles and Prettier defaults                |
 
-All three packages use the MIT license. Consumers install versioned GitHub release tarballs and commit their lockfiles. Automation 0.2.4 and lint configuration 0.1.4 are prepared locally; until their releases exist, consumers retain temporary `vendor/` tarballs. After publication, replace these with the exact release URLs and remove the vendor folders. Runtime dependencies remain separate from development tooling.
+All three packages use the MIT license. Consumers install versioned GitHub release tarballs and commit their lockfiles. The current tooling releases are automation 0.2.6 and lint configuration 0.1.5. Update consumers manually: change the exact release URL, refresh and commit the lockfile, then run `bun run verify`. Repositories may adopt releases independently; there is no portfolio upgrade tool. Runtime dependencies remain separate from development tooling.
 
 ## Development
 
@@ -39,7 +39,16 @@ export default defineConfig(({ mode }) =>
 
 Add local `plugins`, `resolve`, `define`, `worker`, `target`, or `polyfilledBuiltins` options when needed. Production builds clean `dist`; development builds preserve existing files in the plugin's example-vault directory. Builds emit one CommonJS `main.js`, a copied manifest and optional `styles.css`. Validation rejects unexpected install files, missing licenses, mismatched manifests and unbundled runtime dependencies. Packaging writes an install zip under the actual manifest id in `artifacts`.
 
-Canonical consumer commands include `check`, `verify`, `lint:review`, `package` and `release:prepare`. API packages are built and packed after the plugin build clears `dist`.
+The consumer workflow is:
+
+- `bun run dev` watches and builds into `exampleVault/.obsidian/plugins/<manifest-id>`. Open that vault in Obsidian and use the configured reload hotkey to see changes. The watcher does not typecheck; editor/LSP diagnostics provide feedback while editing.
+- `bun run check` checks formatting, types, lint and tests, including Svelte/API checks where applicable.
+- `bun run verify` runs those checks, builds production output and validates it.
+- `bun run package` builds fresh production output and creates the install zip; it also packs API packages where applicable. Run `verify` separately when checks are needed.
+- `bun run lint:review` captures independent advisory scanner findings, including accepted CI exceptions.
+- `bun run release:prepare` verifies a clean development branch and prepares version metadata.
+
+The lower-level `lemons-automation package` command archives existing validated `dist` files. Release CI calls it immediately after `verify` to avoid building twice. API packages are built and packed after the plugin build clears `dist`. Packaging requires the `zip` executable on PATH; archive inspection in tooling tests also uses `unzip`.
 
 ## Release preparation
 
@@ -54,7 +63,9 @@ Plugin repositories configure read-only preconditions:
 }
 ```
 
-`lemons-automation release:prepare` requires a clean development branch, verifies the repository and prepares stable/canary version metadata for review. Preconditions that change tracked or untracked work fail without staging or committing it. Review and commit the metadata changes, then publish explicitly. The legacy `release` CLI alias also performs preparation only.
+`lemons-automation release:prepare` requires a clean development branch, verifies the repository and prepares stable/canary version metadata for review. Preconditions that change tracked or untracked work fail without staging or committing it. Checks stream their stdout and stderr as they run, preserving the child process output and colors. A final status reports success or failure. Review and commit the metadata changes, then publish explicitly. The legacy `release` CLI alias also performs preparation only.
+
+For a stable plugin release, prepare the version, review and commit the resulting metadata, then create and push a tag matching `manifest.json` (for example `0.7.8`). For a canary, preparation leaves stable metadata unchanged: tag the verified commit with the printed same-base canary version (for example `0.7.7-canary.<timestamp>`). Push the tag explicitly. The workflow checks the tag, derives the canary manifest in its disposable checkout, verifies and packages the plugin, and publishes canaries as prereleases. Do not add the shared-package tag prefixes to plugin tags.
 
 Prepare a shared package version with:
 
@@ -62,13 +73,13 @@ Prepare a shared package version with:
 bun run release:package
 ```
 
-This updates the chosen package's version for review. After verification, explicitly commit and create the matching `helpers-v<version>`, `automation-v<version>`, or `eslint-config-v<version>` tag. The release workflow verifies the tagged source and package version, packs the matching package, and attaches its tarball to a GitHub release. It uses the repository GITHUB_TOKEN with contents write permission; npm credentials are unnecessary. No release workflow has been executed as part of the local tooling rollout.
+This updates the chosen package's version for review. After verification, explicitly commit and create the matching `helpers-v<version>`, `automation-v<version>`, or `eslint-config-v<version>` tag. The release workflow verifies the tagged source and package version, packs the matching package, and attaches its tarball to a GitHub release. It uses the repository GITHUB_TOKEN with contents write permission; npm credentials are unnecessary. The tagged GitHub workflow is the publication path; local preparation does not publish.
 
 Install from the exact asset URL, for example:
 
 ```bash
-bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/automation-v0.2.4/automation-v0.2.4.tgz
-bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/eslint-config-v0.1.4/eslint-config-v0.1.4.tgz
+bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/automation-v0.2.6/automation-v0.2.6.tgz
+bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/eslint-config-v0.1.5/eslint-config-v0.1.5.tgz
 ```
 
 These are packed packages with built exports, rather than GitHub source archives. Ordinary transitive dependencies still resolve from npm. Publish each version once; retain the consumer lockfile integrity checks. Before publishing, the tag must point to a reviewed commit containing the complete tooling implementation.

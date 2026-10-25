@@ -4,7 +4,9 @@ Use `createCIConfig({ root, host, workers, svelteConfig, overrides })` in `eslin
 
 Use `createReviewConfig({ root })` in `eslint.review.config.mjs`. This profile accepts no consumer rule exceptions and follows the upstream documented scanner exclusions, disabled rules and six security error severities; other enabled rules become warnings. It uses scanner-style project discovery. It does not certify the live directory review, which may change independently. Specification: https://github.com/obsidianmd/eslint-plugin/blob/837b01dc1647cb3f0c532becb60ea83bec137656/docs/configuration.md. Preset version: 0.4.2.
 
-`lint` gates CI with `--max-warnings=0`. `lint:review` preserves advisory warning semantics. Store exceptions in the consumer CI config with scope and rationale; shared source suppression comments affect both profiles and are discouraged. Existing findings should be recorded before fixes; never automatically disable every reported rule.
+`lint` gates CI on errors, without `--max-warnings=0`. CI promotes enabled non-Obsidian development rules from warning to error, preserving rule options and disabled rules; Obsidian advisory warnings remain warnings. Explicit consumer overrides apply last. `lint:review` preserves its independent scanner severities.
+
+Record individually accepted CI errors in a committed `eslint-ci-suppressions.json`, passed to both `lint` and `lint:fix` with `--suppressions-location eslint-ci-suppressions.json`. Explain each acceptance with a normal comment at the source location. Do not pass that file to `lint:review` or use inline disable comments for these acceptances. ESLint matches suppressions by file, rule and count, only for errors; an increased count fails CI, and resolved findings require `--prune-suppressions --suppressions-location eslint-ci-suppressions.json`. Generate or expand baselines only after reviewing the individual findings.
 
 The `./prettier` export supplies common formatting defaults. Consumers retain intentional width differences and add Svelte formatting where needed.
 
