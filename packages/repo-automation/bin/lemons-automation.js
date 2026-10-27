@@ -11,7 +11,7 @@ function printUsage() {
 	console.log('  package            Archive existing dist files (run bun run package for a fresh build)');
 	console.log('  release:manifest   Select the tagged build manifest using RELEASE_TAG (release checkout only)');
 	console.log('  release:notes      Write the tagged changelog entry using RELEASE_TAG and RELEASE_NOTES_PATH');
-	console.log('  release:prepare    Prepare version metadata without commits or publication');
+	console.log('  release            Check, prepare, commit, merge, tag, and push a release');
 }
 
 const [, , command] = process.argv;
@@ -29,7 +29,7 @@ if (command === 'validate' || command === 'package') {
 		console.error(error.message);
 		process.exit(1);
 	}
-} else if (command === 'release:notes' || command === 'release:manifest' || command === 'release' || command === 'release:prepare') {
+} else if (command === 'release:notes' || command === 'release:manifest' || command === 'release') {
 	try {
 		if (command === 'release:notes' || command === 'release:manifest') {
 			if (!process.env.RELEASE_TAG) {

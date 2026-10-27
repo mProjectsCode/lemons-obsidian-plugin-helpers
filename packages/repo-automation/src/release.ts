@@ -82,7 +82,7 @@ export async function loadConfig(repoRoot: string, fileSystem: FileSystem = defa
 	throw new UserError(`repo automation config not found at "${localConfigPath}"`);
 }
 
-export async function runPreconditions(preconditions: string[] | undefined): Promise<void> {
+export async function runPreconditions(preconditions: string[] | undefined, repoRoot?: string): Promise<void> {
 	if (!preconditions || preconditions.length === 0) {
 		return;
 	}
@@ -94,14 +94,9 @@ export async function runPreconditions(preconditions: string[] | undefined): Pro
 			throw new UserError(`precondition "${cmd}" failed`);
 		},
 		() => {},
-		undefined,
+		repoRoot,
 		Verboseness.VERBOSE,
 	);
-
-	const status = await $('git status --porcelain', undefined, Verboseness.QUITET);
-	if (status.exit !== 0 || status.stdout.trim()) {
-		throw new UserError('Release preconditions changed the working tree; inspect changes before continuing');
-	}
 }
 
 /** Select the manifest shipped by a tagged release in its disposable build checkout. */
@@ -157,6 +152,41 @@ export async function prepareReleaseVersion(
 	}
 }
 
+async function runGit(repoRoot: string, ...args: string[]): Promise<string> {
+	console.log(`git ${args.join(' ')}`);
+	const proc = Bun.spawn(['git', ...args], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
+	const [stdout, stderr, exit] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+	if (exit !== 0) {
+		throw new UserError(`git ${args.join(' ')} failed: ${stderr.trim() || stdout.trim()}`);
+	}
+	return stdout.trim();
+}
+
+/** Commit prepared changes and publish both branches and the annotated release tag. */
+export async function publishRelease(repoRoot: string, config: RepoAutomationConfig, version: string): Promise<void> {
+	// Reject an existing tag before creating any commits or changing branches.
+	const tags = await runGit(repoRoot, 'tag', '--list', version);
+	if (tags) {
+		throw new UserError(`Release tag ${version} already exists`);
+	}
+	await runGit(repoRoot, 'add', '--all');
+	if (await runGit(repoRoot, 'diff', '--cached', '--name-only')) {
+		await runGit(repoRoot, 'commit', '-m', `[auto] bump version to ${version}`);
+	}
+	if (config.releaseBranch !== config.devBranch) {
+		await runGit(repoRoot, 'checkout', config.releaseBranch);
+		await runGit(repoRoot, 'merge', config.devBranch, '--no-edit');
+	}
+	await runGit(repoRoot, 'tag', '-a', version, '-m', `release version ${version}`);
+	if (config.releaseBranch !== config.devBranch) {
+		await runGit(repoRoot, 'checkout', config.devBranch);
+		await runGit(repoRoot, 'merge', config.releaseBranch, '--no-edit');
+	}
+	// Publish together so a rejected branch update cannot publish a tag on its own.
+	const refs = [...new Set([config.devBranch, config.releaseBranch])].map(branch => `refs/heads/${branch}`);
+	await runGit(repoRoot, 'push', '--atomic', 'origin', ...refs, `refs/tags/${version}`);
+}
+
 export async function runRelease(): Promise<void> {
 	const repoRoot = await getRepoRoot();
 	const config = await loadConfig(repoRoot, defaultFileSystem);
@@ -167,16 +197,14 @@ export async function runRelease(): Promise<void> {
 
 	const status = await $('git status --porcelain', undefined, Verboseness.QUITET);
 	if (status.exit !== 0 || status.stdout.trim()) {
-		throw new UserError('Working tree must be clean before release preparation');
+		throw new UserError('Working tree must be clean before release');
 	}
-	const branch = await $('git branch --show-current', undefined, Verboseness.QUITET);
-	if (branch.exit !== 0 || branch.stdout.trim() !== config.devBranch) {
-		throw new UserError(`Switch to ${config.devBranch} before release preparation`);
-	}
+	await runGit(repoRoot, 'checkout', config.devBranch);
+	await runGit(repoRoot, 'rev-parse', '--verify', `refs/heads/${config.releaseBranch}`);
 
 	console.log('\nrunning preconditions ...\n');
 
-	await runPreconditions(config.preconditions);
+	await runPreconditions(config.preconditions, repoRoot);
 
 	console.log('\nbumping versions ...\n');
 
@@ -215,13 +243,18 @@ export async function runRelease(): Promise<void> {
 		});
 	});
 
-	console.log(`${CMD_FMT.BgGreen}Prepared ${newVersionString}${CMD_FMT.Reset}`);
-	console.log(
-		newVersion instanceof CanaryVersion
-			? 'Stable metadata is unchanged. Review and commit the changelog, then tag that commit with the prepared canary version explicitly.'
-			: 'Review the changelog and manifest/package/version changes, then commit and publish explicitly.',
+	await $seq(
+		['bun run format'],
+		() => {
+			throw new UserError('Release formatting failed');
+		},
+		() => {},
+		repoRoot,
+		Verboseness.VERBOSE,
 	);
-	console.log(config.github);
+	await publishRelease(repoRoot, config, newVersionString);
+	console.log(`${CMD_FMT.BgGreen}Released ${newVersionString}${CMD_FMT.Reset}`);
+	console.log(`${config.github}/releases/tag/${newVersionString}`);
 }
 
 if (import.meta.main) {
@@ -233,5 +266,6 @@ if (import.meta.main) {
 		} else {
 			console.error(e);
 		}
+		process.exitCode = 1;
 	}
 }

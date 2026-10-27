@@ -48,7 +48,7 @@
     },
     "packages/repo-automation": {
       "name": "@lemons_dev/lemons-obsidian-plugin-automation",
-      "version": "0.2.6",
+      "version": "0.2.9",
       "bin": {
         "lemons-automation": "bin/lemons-automation.js",
       },
