@@ -57,11 +57,14 @@ function releaseLabel(title: string): string | undefined {
 		.toLowerCase();
 }
 
-export function selectChangelogEntry(content: string, version: string, allowUnreleased = false): ChangelogEntry {
+export function selectChangelogEntry(content: string, version: string, allowUnreleased = false, allowEmpty = false): ChangelogEntry {
 	parseVersion(version);
 	const all = headings(content);
 	const exact = all.filter(heading => releaseLabel(heading.title) === version.toLowerCase());
 	const candidates = exact.length > 0 || !allowUnreleased ? exact : all.filter(heading => releaseLabel(heading.title) === 'unreleased');
+	if (candidates.length === 0 && allowUnreleased && allowEmpty) {
+		return { notes: '', content: content.trimEnd() + (content.trim() ? '\n\n' : '') + `# ${version}\n` };
+	}
 	if (candidates.length !== 1) {
 		throw new UserError(
 			`CHANGELOG.md must contain exactly one heading for ${version}${allowUnreleased ? ' or a single Unreleased fallback' : ''}; found ${candidates.length}`,
@@ -70,7 +73,7 @@ export function selectChangelogEntry(content: string, version: string, allowUnre
 	const heading = candidates[0];
 	const end = all.find(next => next.start > heading.start && next.level <= heading.level)?.start ?? content.length;
 	const notes = content.slice(heading.end, end).trim();
-	if (!notes) {
+	if (!notes && !allowEmpty) {
 		throw new UserError(`CHANGELOG.md entry for ${version} is empty`);
 	}
 	if (exact.length === 0) {
@@ -86,16 +89,20 @@ export async function readChangelogEntry(
 	version: string,
 	allowUnreleased = false,
 	fileSystem: FileSystem = defaultFileSystem,
+	allowEmpty = false,
 ): Promise<ChangelogEntry> {
 	const filename = fileSystem.join(repoRoot, 'CHANGELOG.md');
 	if (!(await fileSystem.exists(filename))) {
+		if (allowUnreleased && allowEmpty) {
+			return selectChangelogEntry('', version, true, true);
+		}
 		throw new UserError(`CHANGELOG.md not found at "${filename}"`);
 	}
-	return selectChangelogEntry(await fileSystem.readText(filename), version, allowUnreleased);
+	return selectChangelogEntry(await fileSystem.readText(filename), version, allowUnreleased, allowEmpty);
 }
 
 /** CI requires a finalized entry matching the tag; it never falls back to Unreleased. */
 export async function writeReleaseNotes(repoRoot: string, tag: string, outputPath: string, fileSystem: FileSystem = defaultFileSystem): Promise<void> {
-	const { notes } = await readChangelogEntry(repoRoot, tag, false, fileSystem);
-	await fileSystem.writeText(outputPath, notes + '\n');
+	const { notes } = await readChangelogEntry(repoRoot, tag, false, fileSystem, true);
+	await fileSystem.writeText(outputPath, notes ? notes + '\n' : '');
 }

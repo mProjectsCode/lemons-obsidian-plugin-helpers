@@ -62,7 +62,7 @@ describe('release changelog safety', () => {
 		'/repo/versions.json': '{"1.2.2":"1.13.0"}',
 	};
 
-	it('missing or invalid changelogs fail before confirmation or any metadata changes', async () => {
+	it('missing or empty notes require a decision before any metadata changes', async () => {
 		for (const changelog of [undefined, '# 1.2.2\nOld', '# Unreleased\n']) {
 			const fs = new MemoryFileSystem(metadata);
 			if (changelog !== undefined) fs.setFile('/repo/CHANGELOG.md', changelog);
@@ -71,13 +71,15 @@ describe('release changelog safety', () => {
 				prepareReleaseVersion(
 					'/repo',
 					parseVersion('1.2.3'),
-					async () => {
+					async notes => {
+						expect(notes).toBe('');
 						confirmed = true;
+						throw new Error('canceled');
 					},
 					fs,
 				),
 			).rejects.toThrow();
-			expect(confirmed).toBe(false);
+			expect(confirmed).toBe(true);
 			for (const [filename, content] of Object.entries(metadata)) expect(fs.getFile(filename)).toBe(content);
 			expect(fs.getFile('/repo/CHANGELOG.md')).toBe(changelog);
 		}
@@ -122,6 +124,68 @@ describe('release changelog safety', () => {
 			} else {
 				expect(JSON.parse(await fs.readText('/repo/manifest.json')).version).toBe(tag);
 			}
+		}
+	});
+});
+
+describe('interactive empty release decision', () => {
+	const metadata = {
+		'/repo/manifest.json': '{"version":"1.2.2","minAppVersion":"1.13.0"}',
+		'/repo/package.json': '{"version":"1.2.2"}',
+		'/repo/versions.json': '{"1.2.2":"1.13.0"}',
+	};
+
+	it('allows missing files, missing sections and empty sections only after confirming empty notes', async () => {
+		for (const changelog of [undefined, '# Changelog\n', '# 1.2.2\n\nOld notes\n', '# Unreleased\n', '# 1.2.3\n']) {
+			const fs = new MemoryFileSystem(metadata);
+			if (changelog !== undefined) fs.setFile('/repo/CHANGELOG.md', changelog);
+			let confirmed = false;
+			await prepareReleaseVersion(
+				'/repo',
+				parseVersion('1.2.3'),
+				async notes => {
+					expect(notes).toBe('');
+					expect(fs.getFile('/repo/CHANGELOG.md')).toBe(changelog);
+					for (const [filename, content] of Object.entries(metadata)) expect(fs.getFile(filename)).toBe(content);
+					confirmed = true;
+				},
+				fs,
+			);
+			expect(confirmed).toBe(true);
+			expect(fs.getFile('/repo/CHANGELOG.md')).toContain('# 1.2.3');
+			if (changelog?.includes('Old notes')) expect(fs.getFile('/repo/CHANGELOG.md')).toContain('Old notes');
+			await writeReleaseNotes('/repo', '1.2.3', '/notes.md', fs);
+			expect(fs.getFile('/notes.md')).toBe('');
+		}
+	});
+
+	it('canceling an empty release creates no changelog and changes no metadata', async () => {
+		const fs = new MemoryFileSystem(metadata);
+		await expect(
+			prepareReleaseVersion(
+				'/repo',
+				parseVersion('1.2.3'),
+				async () => {
+					throw new Error('canceled');
+				},
+				fs,
+			),
+		).rejects.toThrow('canceled');
+		expect(await fs.exists('/repo/CHANGELOG.md')).toBe(false);
+		for (const [filename, content] of Object.entries(metadata)) expect(fs.getFile(filename)).toBe(content);
+	});
+
+	it('does not bypass ambiguous entries or silently discard existing notes', () => {
+		expect(() => selectChangelogEntry('# 1.2.3\n\n# 1.2.3\n', '1.2.3', true, true)).toThrow();
+		expect(selectChangelogEntry('# Unreleased\n\nExisting notes\n', '1.2.3', true, true).notes).toBe('Existing notes');
+	});
+
+	it('CI still rejects missing headings even though finalized empty entries are allowed', async () => {
+		for (const changelog of [undefined, '# Unreleased\n']) {
+			const fs = new MemoryFileSystem();
+			if (changelog !== undefined) fs.setFile('/repo/CHANGELOG.md', changelog);
+			await expect(writeReleaseNotes('/repo', '1.2.3', '/notes.md', fs)).rejects.toThrow();
+			expect(await fs.exists('/notes.md')).toBe(false);
 		}
 	});
 });

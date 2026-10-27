@@ -148,11 +148,11 @@ export async function prepareReleaseVersion(
 	confirmNotes: (notes: string) => Promise<void>,
 	fileSystem: FileSystem = defaultFileSystem,
 ): Promise<void> {
-	const entry = await readChangelogEntry(repoRoot, stringifyVersion(version), true, fileSystem);
+	const entry = await readChangelogEntry(repoRoot, stringifyVersion(version), true, fileSystem, true);
 	await confirmNotes(entry.notes);
 	await prepareVersionMetadata(repoRoot, version, fileSystem);
 	const changelogPath = fileSystem.join(repoRoot, 'CHANGELOG.md');
-	if (entry.content !== (await fileSystem.readText(changelogPath))) {
+	if (!(await fileSystem.exists(changelogPath)) || entry.content !== (await fileSystem.readText(changelogPath))) {
 		await fileSystem.writeText(changelogPath, entry.content);
 	}
 }
@@ -202,6 +202,13 @@ export async function runRelease(): Promise<void> {
 	});
 
 	await prepareReleaseVersion(repoRoot, newVersion, async notes => {
+		if (!notes) {
+			const choice = await $choice('No release notes found for this version.', ['Continue without release notes', 'Cancel release']);
+			if (choice !== 0) {
+				throw new UserError('user canceled script');
+			}
+			return;
+		}
 		console.log(`\nRelease notes for ${newVersionString}:\n\n${notes}\n`);
 		await $confirm('Use this changelog entry', () => {
 			throw new UserError('user canceled script');
