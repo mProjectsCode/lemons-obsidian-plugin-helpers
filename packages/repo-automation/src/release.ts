@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { readChangelogEntry } from './changelog';
+export { writeReleaseNotes } from './changelog';
 import type { FileSystem } from './utils/fileSystem';
 import { defaultFileSystem } from './utils/fileSystem';
 import { $, $choice, $confirm, $seq, CMD_FMT, Verboseness } from './utils/shellUtils';
@@ -139,6 +141,22 @@ export async function prepareVersionMetadata(repoRoot: string, version: Version,
 	await writeJsonFile(packagePath, metadata, fileSystem);
 }
 
+/** Validate and confirm notes before touching any version metadata or the changelog. */
+export async function prepareReleaseVersion(
+	repoRoot: string,
+	version: Version,
+	confirmNotes: (notes: string) => Promise<void>,
+	fileSystem: FileSystem = defaultFileSystem,
+): Promise<void> {
+	const entry = await readChangelogEntry(repoRoot, stringifyVersion(version), true, fileSystem);
+	await confirmNotes(entry.notes);
+	await prepareVersionMetadata(repoRoot, version, fileSystem);
+	const changelogPath = fileSystem.join(repoRoot, 'CHANGELOG.md');
+	if (entry.content !== (await fileSystem.readText(changelogPath))) {
+		await fileSystem.writeText(changelogPath, entry.content);
+	}
+}
+
 export async function runRelease(): Promise<void> {
 	const repoRoot = await getRepoRoot();
 	const config = await loadConfig(repoRoot, defaultFileSystem);
@@ -183,13 +201,18 @@ export async function runRelease(): Promise<void> {
 		throw new UserError('user canceled script');
 	});
 
-	await prepareVersionMetadata(repoRoot, newVersion);
+	await prepareReleaseVersion(repoRoot, newVersion, async notes => {
+		console.log(`\nRelease notes for ${newVersionString}:\n\n${notes}\n`);
+		await $confirm('Use this changelog entry', () => {
+			throw new UserError('user canceled script');
+		});
+	});
 
 	console.log(`${CMD_FMT.BgGreen}Prepared ${newVersionString}${CMD_FMT.Reset}`);
 	console.log(
 		newVersion instanceof CanaryVersion
-			? 'Stable metadata is unchanged. Tag this commit with the prepared canary version explicitly.'
-			: 'Review the manifest/package/version changes, then commit and publish explicitly.',
+			? 'Stable metadata is unchanged. Review and commit the changelog, then tag that commit with the prepared canary version explicitly.'
+			: 'Review the changelog and manifest/package/version changes, then commit and publish explicitly.',
 	);
 	console.log(config.github);
 }

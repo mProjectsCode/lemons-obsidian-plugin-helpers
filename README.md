@@ -8,7 +8,7 @@ Three independently versioned packages share this repository:
 | `@lemons_dev/lemons-obsidian-plugin-automation` | `packages/repo-automation` | Plugin builds, artifact validation, packaging and release preparation |
 | `@lemons_dev/eslint-config-obsidian`            | `packages/eslint-config`   | Development/review lint profiles and Prettier defaults                |
 
-All three packages use the MIT license. Consumers install versioned GitHub release tarballs and commit their lockfiles. The current tooling releases are automation 0.2.6 and lint configuration 0.1.5. Update consumers manually: change the exact release URL, refresh and commit the lockfile, then run `bun run verify`. Repositories may adopt releases independently; there is no portfolio upgrade tool. Runtime dependencies remain separate from development tooling.
+All three packages use the MIT license. Consumers install versioned GitHub release tarballs and commit their lockfiles. The current tooling releases are automation 0.2.7 and lint configuration 0.1.5. Update consumers manually: change the exact release URL, refresh and commit the lockfile, then run `bun run verify`. Repositories may adopt releases independently; there is no portfolio upgrade tool. Runtime dependencies remain separate from development tooling.
 
 ## Development
 
@@ -65,6 +65,10 @@ Plugin repositories configure read-only preconditions:
 
 `lemons-automation release:prepare` requires a clean development branch, verifies the repository and prepares stable/canary version metadata for review. Preconditions that change tracked or untracked work fail without staging or committing it. Checks stream their stdout and stderr as they run, preserving the child process output and colors. A final status reports success or failure. Review and commit the metadata changes, then publish explicitly. The legacy `release` CLI alias also performs preparation only.
 
+After version selection, preparation requires a nonempty `CHANGELOG.md` entry for that exact version, or a single `Unreleased` entry as a fallback. It displays the selected notes and asks for confirmation before changing the changelog or any version metadata. A fallback heading is renamed to the selected version, including for canaries; stable metadata stays unchanged for canaries. Missing files, missing/duplicate headings, empty entries, and canceled confirmation leave these files untouched. Supported Markdown headings use `#` through `######`, plain or bracketed versions (optionally prefixed with `v`), or `Unreleased`; version headings can include ` - YYYY-MM-DD`. Entries end at the next heading of the same or higher level, and nested headings and fenced examples are preserved. An exact version entry takes precedence over `Unreleased`.
+
+In release CI, run `bun x --no-install lemons-automation release:notes` with `RELEASE_TAG` set to the tag and `RELEASE_NOTES_PATH` set to a file under the runner temporary directory. This uses the same parser, requires the exact finalized version heading, and writes only that entry's body. Pass that file to `softprops/action-gh-release` as `body_path`. CI never renames or falls back to `Unreleased`.
+
 For a stable plugin release, prepare the version, review and commit the resulting metadata, then create and push a tag matching `manifest.json` (for example `0.7.8`). For a canary, preparation leaves stable metadata unchanged: tag the verified commit with the printed same-base canary version (for example `0.7.7-canary.<timestamp>`). Push the tag explicitly. The workflow checks the tag, derives the canary manifest in its disposable checkout, verifies and packages the plugin, and publishes canaries as prereleases. Do not add the shared-package tag prefixes to plugin tags.
 
 Prepare a shared package version with:
@@ -78,7 +82,7 @@ This updates the chosen package's version for review. After verification, explic
 Install from the exact asset URL, for example:
 
 ```bash
-bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/automation-v0.2.6/automation-v0.2.6.tgz
+bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/automation-v0.2.7/automation-v0.2.7.tgz
 bun add --dev https://github.com/mProjectsCode/lemons-obsidian-plugin-helpers/releases/download/eslint-config-v0.1.5/eslint-config-v0.1.5.tgz
 ```
 
